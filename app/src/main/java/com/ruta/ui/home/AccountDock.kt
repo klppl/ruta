@@ -1,13 +1,15 @@
 package com.ruta.ui.home
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -73,8 +75,6 @@ private fun DockItem(tab: Tab, active: Boolean, onClick: () -> Unit, onClose: ()
     val accent = accentForProfile(tab.profileId)
     val iconRes = service?.let { brandIconRes(it.id) }
     val faviconUrl = if (service == null && host != null) "https://icons.duckduckgo.com/ip3/$host.ico" else null
-    val ring = if (active) Modifier.border(2.5.dp, accent, CircleShape)
-    else Modifier.border(1.dp, accent.copy(alpha = 0.4f), CircleShape)
 
     Surface(
         modifier = Modifier
@@ -82,11 +82,14 @@ private fun DockItem(tab: Tab, active: Boolean, onClick: () -> Unit, onClose: ()
             .alpha(if (active) 1f else 0.55f),
         shape = CircleShape,
         color = service?.brandColor ?: if (faviconUrl != null) Color.White else MaterialTheme.colorScheme.surface,
+        border = BorderStroke(
+            width = if (active) 2.5.dp else 1.dp,
+            color = if (active) accent else accent.copy(alpha = 0.4f),
+        ),
     ) {
         androidx.compose.foundation.layout.Box(
             modifier = Modifier
-                .clip(CircleShape)
-                .then(ring)
+                .fillMaxSize()
                 .combinedClickable(onClick = onClick, onLongClick = onClose),
             contentAlignment = Alignment.Center,
         ) {
@@ -100,15 +103,24 @@ private fun DockItem(tab: Tab, active: Boolean, onClick: () -> Unit, onClose: ()
                 faviconUrl != null -> SubcomposeAsyncImage(
                     model = faviconUrl,
                     contentDescription = host,
-                    modifier = Modifier.size(24.dp).clip(CircleShape),
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
                 ) {
-                    if (painter.state is AsyncImagePainter.State.Success) SubcomposeAsyncImageContent()
-                    else Icon(
-                        imageVector = Icons.Rounded.Public,
-                        contentDescription = "Site",
-                        tint = Color(0xFF1C1B1F),
-                        modifier = Modifier.size(22.dp),
-                    )
+                    if (painter.state is AsyncImagePainter.State.Success) {
+                        SubcomposeAsyncImageContent()
+                    } else {
+                        androidx.compose.foundation.layout.Box(
+                            Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Public,
+                                contentDescription = "Site",
+                                tint = Color(0xFF1C1B1F),
+                                modifier = Modifier.size(22.dp),
+                            )
+                        }
+                    }
                 }
                 else -> Icon(
                     imageVector = Icons.Rounded.Public,
