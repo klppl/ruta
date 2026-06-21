@@ -51,6 +51,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+        // Bind WebView creation to this Activity so system autofill (Bitwarden etc.) works.
+        engine.attachActivity(this)
         wireEngineHandlers()
 
         val initialUrl = intent?.takeIf { it.action == Intent.ACTION_VIEW }?.dataString
@@ -61,6 +63,12 @@ class MainActivity : ComponentActivity() {
                 onExit = { moveTaskToBack(true) },
             )
         }
+    }
+
+    override fun onDestroy() {
+        // Don't leak this Activity into the singleton engine after teardown.
+        if (isFinishing) engine.detachActivity()
+        super.onDestroy()
     }
 
     private fun wireEngineHandlers() {

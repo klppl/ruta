@@ -3,10 +3,13 @@ package com.ruta.browser
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
+import android.content.MutableContextWrapper
 import android.net.Uri
+import android.view.ContextThemeWrapper
 import android.os.Handler
 import android.os.Looper
 import android.os.Message
+import android.view.View
 import android.view.ViewGroup
 import android.webkit.CookieManager
 import android.webkit.WebView
@@ -15,6 +18,7 @@ import androidx.webkit.ProxyController
 import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebViewFeature
 import com.ruta.BuildConfig
+import com.ruta.R
 import com.ruta.blocking.BlocklistRepository
 import com.ruta.blocking.RequestBlocker
 import com.ruta.data.settings.AppSettings
@@ -55,12 +59,28 @@ class BrowserEngine @Inject constructor(
     private val main = Handler(Looper.getMainLooper())
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
+    // WebViews must be created with an Activity-backed context so the system Autofill
+    // Framework (Bitwarden, Google, etc.) and other window-scoped features work. The
+    // singleton can't hold an Activity directly, so we point this wrapper at the current
+    // Activity while it's alive and fall back to the app context otherwise.
+    private val webViewHostContext = MutableContextWrapper(context)
+
     @Volatile private var currentSettings: AppSettings = AppSettings()
     private val desktopByTab = HashMap<String, Boolean>()
+    private val darkByTab = HashMap<String, Boolean>()
 
     /** Set by MainActivity to bridge file-chooser and permission flows to the Activity. */
     var fileChooserHandler: ((android.webkit.ValueCallback<Array<Uri>>, android.webkit.WebChromeClient.FileChooserParams) -> Boolean)? = null
     var permissionHandler: ((android.webkit.PermissionRequest) -> Unit)? = null
+
+    /** Called from MainActivity so new WebViews are bound to the Activity (enables autofill). */
+    fun attachActivity(activity: Context) {
+        webViewHostContext.baseContext = activity
+    }
+
+    fun detachActivity() {
+        webViewHostContext.baseContext = context
+    }
 
     init {
         if (BuildConfig.DEBUG) WebView.setWebContentsDebuggingEnabled(true)
@@ -75,10 +95,16 @@ class BrowserEngine @Inject constructor(
     }
 
     fun getOrCreateWebView(tab: Tab, events: TabEvents): WebView {
-        pool.get(tab.id)?.let { return it }
+        val existing = pool.get(tab.id)
+        if (existing != null) {
+            if (darkByTab[tab.id] == currentSettings.forceDarkWebsites) return existing
+            // "Force dark websites" toggled: rebuild this tab in the correctly-themed context.
+            pool.remove(tab.id)
+        }
         val webView = createWebView(tab, events)
         pool.put(tab.id, webView)
         desktopByTab[tab.id] = tab.desktopMode
+        darkByTab[tab.id] = currentSettings.forceDarkWebsites
         if (tab.url.isNotBlank()) webView.loadUrl(tab.url)
         return webView
     }
@@ -95,6 +121,7 @@ class BrowserEngine @Inject constructor(
     fun destroyTab(tabId: String) {
         pool.remove(tabId)
         desktopByTab.remove(tabId)
+        darkByTab.remove(tabId)
     }
 
     fun setDesktopMode(tabId: String, desktop: Boolean) {
@@ -113,7 +140,9 @@ class BrowserEngine @Inject constructor(
 
     @SuppressLint("SetJavaScriptEnabled")
     private fun createWebView(tab: Tab, events: TabEvents): WebView {
-        val webView = WebView(context)
+        val forceDark = currentSettings.forceDarkWebsites
+        val webView = WebView(webViewContext(forceDark))
+        webView.importantForAutofill = View.IMPORTANT_FOR_AUTOFILL_YES
         // Bind the profile before any load so cookies/storage land in the right store.
         profileManager.applyProfile(webView, tab.profileId)
 
@@ -145,6 +174,8 @@ class BrowserEngine @Inject constructor(
         if (WebViewFeature.isFeatureSupported(WebViewFeature.REQUESTED_WITH_HEADER_ALLOW_LIST)) {
             WebSettingsCompat.setRequestedWithHeaderOriginAllowList(webView.settings, emptySet())
         }
+
+        applyForceDark(webView, forceDark)
 
         CookieManager.getInstance().setAcceptCookie(true)
         CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true)
@@ -180,6 +211,8 @@ class BrowserEngine @Inject constructor(
         webView.setDownloadListener { url, _, _, _, _ ->
             mediaResolver.downloadUrl(url, webView.url, desktopByTab[tab.id] == true)
         }
+        // Dock collapse/reveal is driven by the page script's scroll detection (it catches
+        // single-page-app inner scrollers that the native scroll listener misses).
 
         attachLongPress(webView, tab, events)
         return webView
@@ -224,6 +257,7 @@ class BrowserEngine @Inject constructor(
         val child = createWebView(childTab, events)
         pool.put(childId, child)
         desktopByTab[childId] = parent.desktopMode
+        darkByTab[childId] = currentSettings.forceDarkWebsites
         events.onOpenPopup(childId, parent.profileId, parent.desktopMode)
 
         val transport = resultMsg.obj as WebView.WebViewTransport
@@ -241,6 +275,7 @@ class BrowserEngine @Inject constructor(
                 pushCustomCss(webView)
             }
             "media" -> mediaResolver.onMediaMessage(data, webView.url, desktopByTab[tabId] == true)
+            "scroll" -> events.onChromeVisibility(data?.optBoolean("visible", true) ?: true)
             "context" -> {
                 if (data == null) return
                 val target = ContextTarget(
@@ -289,6 +324,30 @@ class BrowserEngine @Inject constructor(
             context.startActivity(intent)
             true
         }.getOrDefault(false)
+    }
+
+    /**
+     * Context used to create a WebView. Always Activity-backed (via [webViewHostContext]) so
+     * autofill works. For force-dark we wrap it in a non-light theme — a [ContextThemeWrapper]
+     * keeps the Activity in the base chain (unlike createConfigurationContext), so the page
+     * sees prefers-color-scheme: dark while autofill still functions.
+     */
+    private fun webViewContext(forceDark: Boolean): Context =
+        if (forceDark) ContextThemeWrapper(webViewHostContext, R.style.Theme_Ruta_WebDark)
+        else webViewHostContext
+
+    private fun applyForceDark(webView: WebView, enabled: Boolean) {
+        runCatching {
+            if (WebViewFeature.isFeatureSupported(WebViewFeature.ALGORITHMIC_DARKENING)) {
+                WebSettingsCompat.setAlgorithmicDarkeningAllowed(webView.settings, enabled)
+            } else if (WebViewFeature.isFeatureSupported(WebViewFeature.FORCE_DARK)) {
+                @Suppress("DEPRECATION")
+                WebSettingsCompat.setForceDark(
+                    webView.settings,
+                    if (enabled) WebSettingsCompat.FORCE_DARK_ON else WebSettingsCompat.FORCE_DARK_OFF,
+                )
+            }
+        }
     }
 
     private fun applyProxy(settings: AppSettings) {

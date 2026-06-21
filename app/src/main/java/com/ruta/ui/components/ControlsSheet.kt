@@ -14,6 +14,7 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.DesktopWindows
 import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Shield
@@ -40,6 +41,7 @@ fun ControlsSheet(
     onToggleDesktop: () -> Unit,
     onDownloadMedia: () -> Unit,
     onToggleAdBlock: (Boolean) -> Unit,
+    onShowTabs: () -> Unit,
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -75,20 +77,22 @@ fun ControlsSheet(
             checked = adBlockEnabled,
             onCheckedChange = onToggleAdBlock,
         )
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onOpenSettings)
-                .padding(vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(Icons.Rounded.Settings, contentDescription = null)
-            Text(
-                "Settings",
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.padding(start = 16.dp),
-            )
-        }
+        LinkRow(Icons.Rounded.GridView, "All tabs", onShowTabs)
+        LinkRow(Icons.Rounded.Settings, "Settings", onOpenSettings)
+    }
+}
+
+@Composable
+private fun LinkRow(icon: ImageVector, label: String, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(icon, contentDescription = null)
+        Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(start = 16.dp))
     }
 }
 

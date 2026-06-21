@@ -5,6 +5,9 @@ import com.ruta.ui.theme.ThemeMode
 data class AppSettings(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val dynamicColor: Boolean = true,
+    val forceDarkWebsites: Boolean = true,
+    val showAddressBar: Boolean = true,
+    val addressBarAtTop: Boolean = false,
     val adBlockEnabled: Boolean = true,
     val cosmeticFilteringEnabled: Boolean = true,
     val scrubFeedAds: Boolean = true,

@@ -83,6 +83,33 @@ fun SettingsScreen(
                 }
             }
             SettingSwitch("Dynamic color (Material You)", settings.dynamicColor, viewModel::setDynamicColor)
+            SettingSwitch("Force dark mode on websites", settings.forceDarkWebsites, viewModel::setForceDarkWebsites)
+
+            Section("Layout")
+            SettingSwitch("Show address bar", settings.showAddressBar, viewModel::setShowAddressBar)
+            Text(
+                "Address bar position",
+                style = MaterialTheme.typography.bodyLarge,
+                color = if (settings.showAddressBar) MaterialTheme.colorScheme.onSurface
+                else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Row(
+                modifier = Modifier.padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                FilterChip(
+                    selected = settings.addressBarAtTop,
+                    enabled = settings.showAddressBar,
+                    onClick = { viewModel.setAddressBarAtTop(true) },
+                    label = { Text("Top") },
+                )
+                FilterChip(
+                    selected = !settings.addressBarAtTop,
+                    enabled = settings.showAddressBar,
+                    onClick = { viewModel.setAddressBarAtTop(false) },
+                    label = { Text("Bottom") },
+                )
+            }
 
             Section("Privacy & blocking")
             SettingSwitch("Block ads & trackers", settings.adBlockEnabled, viewModel::setAdBlock)

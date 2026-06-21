@@ -341,6 +341,52 @@
     post("context", result);
   }
 
+  // ------------------------------------------------------- chrome on scroll ---
+  // Report scroll direction so the native dock can collapse on scroll-down / reveal on
+  // scroll-up. A capture-phase listener catches single-page-app inner scrollers (X,
+  // Instagram) that don't move the document's own scroll position.
+  (function setupScrollWatch() {
+    var tops = new WeakMap();
+    var accum = 0;
+    var chromeVisible = true;
+    function setChrome(v) {
+      if (v !== chromeVisible) {
+        chromeVisible = v;
+        post("scroll", { visible: v });
+      }
+    }
+    function onScroll(e) {
+      var t = e.target || window;
+      var isDoc = t === window || t === document || t === document.documentElement || t === document.body;
+      var y, scrollable;
+      if (isDoc) {
+        var se = document.scrollingElement || document.documentElement;
+        y = window.scrollY || (se ? se.scrollTop : 0);
+        scrollable = se ? se.scrollHeight - se.clientHeight : 9999;
+      } else {
+        y = t.scrollTop || 0;
+        scrollable = (t.scrollHeight || 0) - (t.clientHeight || 0);
+      }
+      // Ignore elements that aren't really scrollable (avoids fixed bars firing spurious events).
+      if (scrollable < 80) return;
+      var key = isDoc ? document : t;
+      var prev = tops.has(key) ? tops.get(key) : y;
+      tops.set(key, y);
+      var dy = y - prev;
+      if (Math.abs(dy) < 2 || Math.abs(dy) > 1500) return; // noise / jumps (tab switch)
+      if (y <= 6) {
+        accum = 0;
+        setChrome(true);
+        return;
+      }
+      if ((dy > 0) !== (accum > 0)) accum = 0;
+      accum += dy;
+      if (accum > 56) setChrome(false);
+      else if (accum < -56) setChrome(true);
+    }
+    window.addEventListener("scroll", onScroll, true);
+  })();
+
   // --------------------------------------------------------------- exports ---
   window.__ruta = {
     version: 1,

@@ -18,6 +18,9 @@ class SettingsRepository @Inject constructor(
     private object Keys {
         val themeMode = stringPreferencesKey("theme_mode")
         val dynamicColor = booleanPreferencesKey("dynamic_color")
+        val forceDarkWeb = booleanPreferencesKey("force_dark_web")
+        val showAddressBar = booleanPreferencesKey("show_address_bar")
+        val addressBarTop = booleanPreferencesKey("address_bar_top")
         val adBlock = booleanPreferencesKey("ad_block")
         val cosmetic = booleanPreferencesKey("cosmetic")
         val scrubFeed = booleanPreferencesKey("scrub_feed")
@@ -33,6 +36,9 @@ class SettingsRepository @Inject constructor(
             themeMode = p[Keys.themeMode]?.let { runCatching { ThemeMode.valueOf(it) }.getOrNull() }
                 ?: ThemeMode.SYSTEM,
             dynamicColor = p[Keys.dynamicColor] ?: true,
+            forceDarkWebsites = p[Keys.forceDarkWeb] ?: true,
+            showAddressBar = p[Keys.showAddressBar] ?: true,
+            addressBarAtTop = p[Keys.addressBarTop] ?: false,
             adBlockEnabled = p[Keys.adBlock] ?: true,
             cosmeticFilteringEnabled = p[Keys.cosmetic] ?: true,
             scrubFeedAds = p[Keys.scrubFeed] ?: true,
@@ -46,6 +52,9 @@ class SettingsRepository @Inject constructor(
 
     suspend fun setThemeMode(mode: ThemeMode) = edit { it[Keys.themeMode] = mode.name }
     suspend fun setDynamicColor(value: Boolean) = edit { it[Keys.dynamicColor] = value }
+    suspend fun setForceDarkWebsites(value: Boolean) = edit { it[Keys.forceDarkWeb] = value }
+    suspend fun setShowAddressBar(value: Boolean) = edit { it[Keys.showAddressBar] = value }
+    suspend fun setAddressBarAtTop(value: Boolean) = edit { it[Keys.addressBarTop] = value }
     suspend fun setAdBlock(value: Boolean) = edit { it[Keys.adBlock] = value }
     suspend fun setCosmetic(value: Boolean) = edit { it[Keys.cosmetic] = value }
     suspend fun setScrubFeed(value: Boolean) = edit { it[Keys.scrubFeed] = value }

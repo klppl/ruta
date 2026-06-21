@@ -42,6 +42,9 @@ class SettingsViewModel @Inject constructor(
 
     fun setThemeMode(mode: ThemeMode) = launch { settingsRepository.setThemeMode(mode) }
     fun setDynamicColor(v: Boolean) = launch { settingsRepository.setDynamicColor(v) }
+    fun setForceDarkWebsites(v: Boolean) = launch { settingsRepository.setForceDarkWebsites(v) }
+    fun setShowAddressBar(v: Boolean) = launch { settingsRepository.setShowAddressBar(v) }
+    fun setAddressBarAtTop(v: Boolean) = launch { settingsRepository.setAddressBarAtTop(v) }
     fun setAdBlock(v: Boolean) = launch { settingsRepository.setAdBlock(v) }
     fun setCosmetic(v: Boolean) = launch { settingsRepository.setCosmetic(v) }
     fun setScrubFeed(v: Boolean) = launch { settingsRepository.setScrubFeed(v) }

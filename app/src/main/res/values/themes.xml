@@ -8,6 +8,12 @@
         <item name="android:windowLayoutInDisplayCutoutMode" tools:targetApi="o_mr1">shortEdges</item>
     </style>
 
+    <!-- Hosting context for WebViews when "force dark websites" is on: a dark, non-light theme
+         so the page sees prefers-color-scheme: dark and algorithmic darkening engages. -->
+    <style name="Theme.Ruta.WebDark" parent="android:Theme.Material">
+        <item name="android:isLightTheme">false</item>
+    </style>
+
     <style name="Theme.Ruta.Splash" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/window_background</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>

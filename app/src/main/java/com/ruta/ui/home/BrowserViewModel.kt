@@ -59,6 +59,9 @@ class BrowserViewModel @Inject constructor(
     private val _showTabSwitcher = MutableStateFlow(false)
     val showTabSwitcher: StateFlow<Boolean> = _showTabSwitcher.asStateFlow()
 
+    private val _dockVisible = MutableStateFlow(true)
+    val dockVisible: StateFlow<Boolean> = _dockVisible.asStateFlow()
+
     private val _selectedProfileId = MutableStateFlow(Tab.DEFAULT_PROFILE_ID)
     val selectedProfileId: StateFlow<String> = _selectedProfileId.asStateFlow()
 
@@ -112,11 +115,13 @@ class BrowserViewModel @Inject constructor(
         _tabs.value = _tabs.value + tab
         _activeId.value = tab.id
         _showTabSwitcher.value = false
+        _dockVisible.value = true
     }
 
     fun selectTab(id: String) {
         _activeId.value = id
         _showTabSwitcher.value = false
+        _dockVisible.value = true
     }
 
     fun closeTab(id: String) {
@@ -172,9 +177,11 @@ class BrowserViewModel @Inject constructor(
             _activeId.value = tab.id
         }
         _showTabSwitcher.value = false
+        _dockVisible.value = true
     }
 
     private fun loadInActiveTab(url: String) {
+        _dockVisible.value = true
         val active = activeTab.value
         if (active == null) {
             val tab = Tab(id = newId(), url = url, profileId = _selectedProfileId.value, isNewTab = false)
@@ -303,6 +310,10 @@ class BrowserViewModel @Inject constructor(
     }
 
     override fun onCloseTab(tabId: String) = closeTab(tabId)
+
+    override fun onChromeVisibility(visible: Boolean) {
+        _dockVisible.value = visible
+    }
 
     override fun onContextTarget(target: ContextTarget) {
         // Merge so the async JS probe can enrich the immediate HitTestResult.

@@ -12,4 +12,6 @@ interface TabEvents {
     fun onOpenPopup(childTabId: String, profileId: String, desktopMode: Boolean)
     fun onCloseTab(tabId: String)
     fun onContextTarget(target: ContextTarget)
+    /** Page scrolled: false = scrolling down (collapse the dock), true = up/at top (reveal). */
+    fun onChromeVisibility(visible: Boolean)
 }
