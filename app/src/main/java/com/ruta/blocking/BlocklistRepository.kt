@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -29,25 +30,20 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Downloads, caches and parses the EasyList / EasyPrivacy filter lists, then publishes the
- * resulting [RequestBlocker] rules and [CosmeticRules]. Lists are data assets fetched at
- * runtime (never bundled); cached to the app files dir with conditional requests and
- * refreshed periodically via [BlocklistRefreshWorker].
+ * Downloads, caches and parses the enabled filter lists (built-in plus user-added, configured
+ * via [FilterListRepository]), then publishes the resulting [RequestBlocker] rules and
+ * [CosmeticRules]. Lists are fetched at runtime (never bundled), cached to the app files dir
+ * with conditional requests, re-parsed whenever the list config changes, and refreshed
+ * periodically via [BlocklistRefreshWorker].
  */
 @Singleton
 class BlocklistRepository @Inject constructor(
     @ApplicationContext private val context: Context,
     private val httpClient: OkHttpClient,
     private val requestBlocker: RequestBlocker,
+    private val filterListRepository: FilterListRepository,
     settingsRepository: SettingsRepository,
 ) {
-    data class ListSource(val name: String, val url: String)
-
-    private val sources = listOf(
-        ListSource("easylist", "https://easylist.to/easylist/easylist.txt"),
-        ListSource("easyprivacy", "https://easylist.to/easylist/easyprivacy.txt"),
-    )
-
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val refreshMutex = Mutex()
     private val initialized = AtomicBoolean(false)
@@ -69,68 +65,78 @@ class BlocklistRepository @Inject constructor(
         }
     }
 
-    /** Called once from Application.onCreate. Loads cache immediately, then refreshes. */
+    /** Called once from Application.onCreate. Reacts to list-config changes, then refreshes. */
     fun initialize() {
         if (!initialized.compareAndSet(false, true)) return
+        // Re-parse (and fetch any not-yet-cached lists) whenever the enabled set changes.
         scope.launch {
-            loadFromCache()
-            refresh(force = false)
+            filterListRepository.lists.collect { entries -> reconcile(entries) }
         }
+        // Refresh stale lists on startup.
+        scope.launch { refresh(force = false) }
         schedulePeriodicRefresh(context)
     }
 
-    private suspend fun loadFromCache() {
-        val cached = sources.mapNotNull { src ->
-            val f = listFile(src.name)
-            if (f.exists() && f.length() > 0) f.readText() else null
+    private suspend fun reconcile(entries: List<FilterListEntry>) = refreshMutex.withLock {
+        val enabled = entries.filter { it.enabled }
+        _status.value = _status.value.copy(refreshing = true, error = null)
+        var error: String? = null
+        try {
+            for (entry in enabled) {
+                if (!listFile(entry.id).exists()) downloadOne(entry)
+            }
+        } catch (t: Throwable) {
+            error = t.message ?: "download failed"
         }
-        if (cached.isEmpty()) return
-        applyParsed(cached)
+        parseEnabled(enabled)
+        _status.value = _status.value.copy(refreshing = false, error = error)
     }
 
     suspend fun refresh(force: Boolean): Boolean = refreshMutex.withLock {
+        val enabled = filterListRepository.lists.first().filter { it.enabled }
         _status.value = _status.value.copy(refreshing = true, error = null)
         var changed = false
         var error: String? = null
         try {
-            for (src in sources) {
-                val meta = readMeta(src.name)
-                if (!force && meta != null && !meta.isStale() && listFile(src.name).exists()) continue
-                if (downloadOne(src)) changed = true
+            for (entry in enabled) {
+                val meta = readMeta(entry.id)
+                if (!force && meta != null && !meta.isStale() && listFile(entry.id).exists()) continue
+                if (downloadOne(entry)) changed = true
             }
         } catch (t: Throwable) {
             error = t.message ?: "refresh failed"
         }
-
-        if (changed) {
-            val texts = sources.mapNotNull { src ->
-                val f = listFile(src.name)
-                if (f.exists()) f.readText() else null
-            }
-            applyParsed(texts)
-        }
+        parseEnabled(enabled)
         _status.value = _status.value.copy(
             refreshing = false,
             error = error,
-            lastUpdatedMillis = if (changed) nowOrPrevious() else _status.value.lastUpdatedMillis,
+            lastUpdatedMillis = if (changed) System.currentTimeMillis() else _status.value.lastUpdatedMillis,
         )
         error == null
     }
 
+    private suspend fun parseEnabled(enabled: List<FilterListEntry>) {
+        val texts = enabled.mapNotNull { entry ->
+            val f = listFile(entry.id)
+            if (f.exists() && f.length() > 0) f.readText() else null
+        }
+        applyParsed(texts)
+    }
+
     /** Returns true if the cached content was replaced (200), false on 304/no-op. */
-    private fun downloadOne(src: ListSource): Boolean {
-        val prev = readMeta(src.name)
-        val builder = Request.Builder().url(src.url).header("Accept", "text/plain")
+    private fun downloadOne(entry: FilterListEntry): Boolean {
+        val prev = readMeta(entry.id)
+        val builder = Request.Builder().url(entry.url).header("Accept", "text/plain")
         prev?.etag?.let { builder.header("If-None-Match", it) }
         prev?.lastModified?.let { builder.header("If-Modified-Since", it) }
 
         httpClient.newCall(builder.build()).execute().use { resp ->
             if (resp.code == 304) return false
-            if (!resp.isSuccessful) error("HTTP ${resp.code} for ${src.url}")
-            val body = resp.body?.string() ?: error("empty body for ${src.url}")
-            listFile(src.name).writeText(body)
+            if (!resp.isSuccessful) error("HTTP ${resp.code} for ${entry.url}")
+            val body = resp.body?.string() ?: error("empty body for ${entry.url}")
+            listFile(entry.id).writeText(body)
             writeMeta(
-                src.name,
+                entry.id,
                 ListMeta(
                     etag = resp.header("ETag"),
                     lastModified = resp.header("Last-Modified"),
@@ -157,19 +163,18 @@ class BlocklistRepository @Inject constructor(
         )
     }
 
-    private fun nowOrPrevious(): Long = System.currentTimeMillis()
+    private fun listFile(id: String) = File(cacheDir, "${safe(id)}.txt")
+    private fun metaFile(id: String) = File(cacheDir, "${safe(id)}.meta.json")
+    private fun safe(id: String) = id.replace(Regex("[^A-Za-z0-9_-]"), "_")
 
-    private fun listFile(name: String) = File(cacheDir, "$name.txt")
-    private fun metaFile(name: String) = File(cacheDir, "$name.meta.json")
-
-    private fun readMeta(name: String): ListMeta? {
-        val f = metaFile(name)
+    private fun readMeta(id: String): ListMeta? {
+        val f = metaFile(id)
         if (!f.exists()) return null
         return runCatching { ListMeta.json.decodeFromString(ListMeta.serializer(), f.readText()) }.getOrNull()
     }
 
-    private fun writeMeta(name: String, meta: ListMeta) {
-        runCatching { metaFile(name).writeText(ListMeta.json.encodeToString(ListMeta.serializer(), meta)) }
+    private fun writeMeta(id: String, meta: ListMeta) {
+        runCatching { metaFile(id).writeText(ListMeta.json.encodeToString(ListMeta.serializer(), meta)) }
     }
 
     /** Reads the `! Expires:` directive; defaults to 96h (4 days) when absent. */

@@ -10,6 +10,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -30,7 +32,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -48,6 +52,18 @@ fun SettingsScreen(
     val globalCss by viewModel.globalCss.collectAsStateWithLifecycle()
     val status by viewModel.blocklistStatus.collectAsStateWithLifecycle()
     val profiles by viewModel.profiles.collectAsStateWithLifecycle()
+    val filterLists by viewModel.filterLists.collectAsStateWithLifecycle()
+    var showAddFilterList by remember { mutableStateOf(false) }
+
+    if (showAddFilterList) {
+        AddFilterListDialog(
+            onAdd = { name, url ->
+                viewModel.addFilterList(name, url)
+                showAddFilterList = false
+            },
+            onDismiss = { showAddFilterList = false },
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -138,6 +154,40 @@ fun SettingsScreen(
                 }
             }
 
+            Text(
+                "Filter lists",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 12.dp, bottom = 4.dp),
+            )
+            filterLists.forEach { entry ->
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(entry.name, style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            entry.url,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                        )
+                    }
+                    if (!entry.builtIn) {
+                        IconButton(onClick = { viewModel.removeFilterList(entry.id) }) {
+                            Icon(Icons.Rounded.Delete, contentDescription = "Remove list")
+                        }
+                    }
+                    Switch(
+                        checked = entry.enabled,
+                        onCheckedChange = { viewModel.setFilterListEnabled(entry.id, it) },
+                    )
+                }
+            }
+            TextButton(onClick = { showAddFilterList = true }) { Text("+ Add filter list") }
+
             Section("Browsing")
             SettingSwitch("Separate profile per site", settings.separateProfilePerSite, viewModel::setPerSiteProfile)
             SettingSwitch("Double-tap back to exit", settings.doubleBackToExit, viewModel::setDoubleBack)
@@ -219,4 +269,40 @@ private fun ProfileRow(profile: Profile, onDelete: () -> Unit) {
             Text("Default", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
+}
+
+@Composable
+private fun AddFilterListDialog(onAdd: (name: String, url: String) -> Unit, onDismiss: () -> Unit) {
+    var url by remember {
+        mutableStateOf(TextFieldValue("https://", selection = TextRange("https://".length)))
+    }
+    var name by remember { mutableStateOf("") }
+    val hasHost = url.text.trim().removePrefix("https://").removePrefix("http://").isNotBlank()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Add filter list") },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = url,
+                    onValueChange = { url = it },
+                    label = { Text("List URL (ABP or hosts format)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Name (optional)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onAdd(name, url.text) }, enabled = hasHost) { Text("Add") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
 }

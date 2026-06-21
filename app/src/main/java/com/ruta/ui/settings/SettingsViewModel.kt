@@ -3,6 +3,8 @@ package com.ruta.ui.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ruta.blocking.BlocklistRepository
+import com.ruta.blocking.FilterListEntry
+import com.ruta.blocking.FilterListRepository
 import com.ruta.data.settings.AppSettings
 import com.ruta.data.settings.SettingsRepository
 import com.ruta.data.styles.StyleRepository
@@ -11,6 +13,7 @@ import com.ruta.profile.ProfileManager
 import com.ruta.ui.theme.ThemeMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -21,6 +24,7 @@ class SettingsViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val styleRepository: StyleRepository,
     private val profileManager: ProfileManager,
+    private val filterListRepository: FilterListRepository,
     blocklistRepository: BlocklistRepository,
 ) : ViewModel() {
 
@@ -31,6 +35,14 @@ class SettingsViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.Eagerly, "")
 
     val blocklistStatus = blocklistRepository.status
+
+    val filterLists: StateFlow<List<FilterListEntry>> = filterListRepository.lists
+        .stateIn(viewModelScope, SharingStarted.Eagerly, FilterListRepository.DEFAULTS)
+
+    fun addFilterList(name: String, url: String) = launch { filterListRepository.add(name, url) }
+    fun removeFilterList(id: String) = launch { filterListRepository.remove(id) }
+    fun setFilterListEnabled(id: String, enabled: Boolean) =
+        launch { filterListRepository.setEnabled(id, enabled) }
 
     val multiProfileSupported = profileManager.multiProfileSupported
 
