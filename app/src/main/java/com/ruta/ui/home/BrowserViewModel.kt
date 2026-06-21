@@ -15,6 +15,7 @@ import com.ruta.data.settings.SettingsRepository
 import com.ruta.data.tabs.TabRepository
 import com.ruta.model.AppService
 import com.ruta.model.ContextTarget
+import com.ruta.model.Services
 import com.ruta.model.Tab
 import com.ruta.profile.Profile
 import com.ruta.profile.ProfileManager
@@ -209,6 +210,15 @@ class BrowserViewModel @Inject constructor(
     }
 
     fun reloadActive() = _activeId.value?.let(engine::reload)
+
+    /** Tapping the already-active dock icon resets that tab to the service's home URL. */
+    fun resetToHome(tabId: String) {
+        val tab = _tabs.value.firstOrNull { it.id == tabId } ?: return
+        val host = Hosts.hostOf(tab.url)
+        val home = Services.forHost(host)?.url ?: host?.let { "https://$it/" } ?: return
+        engine.loadUrl(tabId, home)
+        _dockVisible.value = true
+    }
 
     fun toggleDesktopMode() {
         val tab = activeTab.value ?: return

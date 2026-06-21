@@ -142,6 +142,7 @@ fun HomeScreen(
                                     tabs = dockTabs,
                                     activeId = current?.id,
                                     onSelect = viewModel::selectTab,
+                                    onReset = viewModel::resetToHome,
                                     onClose = viewModel::closeTab,
                                     onNewTab = { viewModel.addNewTab() },
                                     modifier = Modifier.weight(1f),

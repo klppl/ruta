@@ -45,6 +45,7 @@ fun AccountDock(
     tabs: List<Tab>,
     activeId: String?,
     onSelect: (String) -> Unit,
+    onReset: (String) -> Unit,
     onClose: (String) -> Unit,
     onNewTab: () -> Unit,
     modifier: Modifier = Modifier,
@@ -59,7 +60,8 @@ fun AccountDock(
             DockItem(
                 tab = tab,
                 active = tab.id == activeId,
-                onClick = { onSelect(tab.id) },
+                // Tapping the active account again resets it to the service's home URL.
+                onClick = { if (tab.id == activeId) onReset(tab.id) else onSelect(tab.id) },
                 onClose = { onClose(tab.id) },
             )
         }
