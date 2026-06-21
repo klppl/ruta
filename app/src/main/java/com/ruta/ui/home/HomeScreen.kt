@@ -129,7 +129,7 @@ fun HomeScreen(
                         LoadingLine(progress = current?.progress ?: 0, accent = accent)
                     }
                     AnimatedVisibility(
-                        visible = dockVisible,
+                        visible = dockVisible || !settings.autoHideDock,
                         enter = expandVertically() + fadeIn(),
                         exit = shrinkVertically() + fadeOut(),
                     ) {

@@ -8,6 +8,7 @@ data class AppSettings(
     val forceDarkWebsites: Boolean = true,
     val showAddressBar: Boolean = true,
     val addressBarAtTop: Boolean = false,
+    val autoHideDock: Boolean = true,
     val adBlockEnabled: Boolean = true,
     val cosmeticFilteringEnabled: Boolean = true,
     val scrubFeedAds: Boolean = true,

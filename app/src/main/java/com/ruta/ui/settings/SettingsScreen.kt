@@ -126,6 +126,7 @@ fun SettingsScreen(
                     label = { Text("Bottom") },
                 )
             }
+            SettingSwitch("Auto-hide dock on scroll", settings.autoHideDock, viewModel::setAutoHideDock)
 
             Section("Privacy & blocking")
             SettingSwitch("Block ads & trackers", settings.adBlockEnabled, viewModel::setAdBlock)
