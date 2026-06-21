@@ -25,6 +25,9 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImagePainter
+import coil.compose.SubcomposeAsyncImage
+import coil.compose.SubcomposeAsyncImageContent
 import com.ruta.model.Services
 import com.ruta.model.Tab
 import com.ruta.ui.theme.accentForProfile
@@ -65,9 +68,11 @@ fun AccountDock(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun DockItem(tab: Tab, active: Boolean, onClick: () -> Unit, onClose: () -> Unit) {
-    val service = Services.forHost(Hosts.hostOf(tab.url))
+    val host = Hosts.hostOf(tab.url)
+    val service = Services.forHost(host)
     val accent = accentForProfile(tab.profileId)
     val iconRes = service?.let { brandIconRes(it.id) }
+    val faviconUrl = if (service == null && host != null) "https://icons.duckduckgo.com/ip3/$host.ico" else null
     val ring = if (active) Modifier.border(2.5.dp, accent, CircleShape)
     else Modifier.border(1.dp, accent.copy(alpha = 0.4f), CircleShape)
 
@@ -76,7 +81,7 @@ private fun DockItem(tab: Tab, active: Boolean, onClick: () -> Unit, onClose: ()
             .size(46.dp)
             .alpha(if (active) 1f else 0.55f),
         shape = CircleShape,
-        color = service?.brandColor ?: MaterialTheme.colorScheme.surface,
+        color = service?.brandColor ?: if (faviconUrl != null) Color.White else MaterialTheme.colorScheme.surface,
     ) {
         androidx.compose.foundation.layout.Box(
             modifier = Modifier
@@ -92,6 +97,19 @@ private fun DockItem(tab: Tab, active: Boolean, onClick: () -> Unit, onClose: ()
                     tint = Color.White,
                     modifier = Modifier.size(22.dp),
                 )
+                faviconUrl != null -> SubcomposeAsyncImage(
+                    model = faviconUrl,
+                    contentDescription = host,
+                    modifier = Modifier.size(24.dp).clip(CircleShape),
+                ) {
+                    if (painter.state is AsyncImagePainter.State.Success) SubcomposeAsyncImageContent()
+                    else Icon(
+                        imageVector = Icons.Rounded.Public,
+                        contentDescription = "Site",
+                        tint = Color(0xFF1C1B1F),
+                        modifier = Modifier.size(22.dp),
+                    )
+                }
                 else -> Icon(
                     imageVector = Icons.Rounded.Public,
                     contentDescription = "Site",

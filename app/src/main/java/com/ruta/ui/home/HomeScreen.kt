@@ -20,12 +20,15 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -37,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.ruta.model.AppService
 import com.ruta.ui.components.AddressPill
 import com.ruta.ui.components.ContextSheet
 import com.ruta.ui.components.ControlsSheet
@@ -60,10 +64,13 @@ fun HomeScreen(
     val contextTarget by viewModel.contextTarget.collectAsStateWithLifecycle()
     val blockStatus by viewModel.blocklistStatus.collectAsStateWithLifecycle()
     val dockVisible by viewModel.dockVisible.collectAsStateWithLifecycle()
+    val customServices by viewModel.customServices.collectAsStateWithLifecycle()
     val dockTabs = remember(tabs) { tabs.filterNot { it.isNewTab } }
 
     var showControls by remember { mutableStateOf(false) }
     var editingUrl by remember { mutableStateOf(false) }
+    var showAddCustom by remember { mutableStateOf(false) }
+    var bookmarkToRemove by remember { mutableStateOf<AppService?>(null) }
 
     BackHandler(enabled = true) {
         if (editingUrl) editingUrl = false
@@ -102,6 +109,9 @@ fun HomeScreen(
                         onAddProfile = { viewModel.createProfile("Account ${profiles.size}") },
                         onOpenService = viewModel::openService,
                         onSearch = { editingUrl = true },
+                        customServices = customServices,
+                        onAddCustom = { showAddCustom = true },
+                        onRemoveCustom = { bookmarkToRemove = it },
                         modifier = contentModifier,
                     )
                 } else {
@@ -218,6 +228,30 @@ fun HomeScreen(
                 onCopyLink = viewModel::copyContextLink,
             )
         }
+    }
+
+    if (showAddCustom) {
+        AddCustomDialog(
+            onAdd = { name, url ->
+                viewModel.addBookmark(name, url)
+                showAddCustom = false
+            },
+            onDismiss = { showAddCustom = false },
+        )
+    }
+
+    bookmarkToRemove?.let { bookmark ->
+        AlertDialog(
+            onDismissRequest = { bookmarkToRemove = null },
+            title = { Text("Remove ${bookmark.name}?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.removeBookmark(bookmark.id)
+                    bookmarkToRemove = null
+                }) { Text("Remove") }
+            },
+            dismissButton = { TextButton(onClick = { bookmarkToRemove = null }) { Text("Cancel") } },
+        )
     }
 }
 

@@ -10,6 +10,7 @@ import com.ruta.browser.BrowserEngine
 import com.ruta.browser.MediaResolver
 import com.ruta.browser.TabEvents
 import com.ruta.blocking.BlocklistRepository
+import com.ruta.data.bookmarks.BookmarkRepository
 import com.ruta.data.settings.SettingsRepository
 import com.ruta.data.tabs.TabRepository
 import com.ruta.model.AppService
@@ -44,6 +45,7 @@ class BrowserViewModel @Inject constructor(
     private val mediaResolver: MediaResolver,
     private val tabRepository: TabRepository,
     private val settingsRepository: SettingsRepository,
+    private val bookmarkRepository: BookmarkRepository,
     blocklistRepository: BlocklistRepository,
 ) : ViewModel(), TabEvents {
 
@@ -69,6 +71,17 @@ class BrowserViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.Eagerly, com.ruta.data.settings.AppSettings())
 
     val blocklistStatus = blocklistRepository.status
+
+    val customServices: StateFlow<List<AppService>> = bookmarkRepository.bookmarks
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    fun addBookmark(name: String, url: String) {
+        viewModelScope.launch { bookmarkRepository.add(name, url) }
+    }
+
+    fun removeBookmark(id: String) {
+        viewModelScope.launch { bookmarkRepository.remove(id) }
+    }
 
     val profiles: StateFlow<List<Profile>> = profileManager.userProfiles
         .map { list -> listOf(Profile.Default) + list }

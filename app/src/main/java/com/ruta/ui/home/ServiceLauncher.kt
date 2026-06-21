@@ -1,7 +1,9 @@
 package com.ruta.ui.home
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,6 +20,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -31,8 +34,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImagePainter
+import coil.compose.SubcomposeAsyncImage
+import coil.compose.SubcomposeAsyncImageContent
 import com.ruta.model.AppService
 import com.ruta.model.Services
 import com.ruta.profile.Profile
@@ -46,6 +53,9 @@ fun ServiceLauncher(
     onAddProfile: () -> Unit,
     onOpenService: (AppService) -> Unit,
     onSearch: () -> Unit,
+    customServices: List<AppService>,
+    onAddCustom: () -> Unit,
+    onRemoveCustom: (AppService) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxSize().padding(horizontal = 20.dp)) {
@@ -99,44 +109,98 @@ fun ServiceLauncher(
             modifier = Modifier.fillMaxWidth(),
         ) {
             items(Services.all, key = { it.id }) { service ->
-                ServiceTile(service = service, onClick = { onOpenService(service) })
+                ServiceTile(service = service, onClick = { onOpenService(service) }, onLongClick = null)
             }
+            items(customServices, key = { it.id }) { service ->
+                ServiceTile(
+                    service = service,
+                    onClick = { onOpenService(service) },
+                    onLongClick = { onRemoveCustom(service) },
+                )
+            }
+            item(key = "__add_custom") { AddTile(onClick = onAddCustom) }
         }
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ServiceTile(service: AppService, onClick: () -> Unit) {
-    val onColor = if (service.brandColor.luminance() < 0.5f) Color.White else Color(0xFF1C1B1F)
+private fun ServiceTile(service: AppService, onClick: () -> Unit, onLongClick: (() -> Unit)?) {
+    val background = if (service.isCustom) Color.White else service.brandColor
+    val onColor = if (background.luminance() < 0.5f) Color.White else Color(0xFF1C1B1F)
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(1f)
                 .clip(RoundedCornerShape(24.dp))
-                .background(service.brandColor)
-                .clickable(onClick = onClick),
+                .background(background)
+                .combinedClickable(onClick = onClick, onLongClick = onLongClick),
             contentAlignment = Alignment.Center,
         ) {
             val iconRes = brandIconRes(service.id)
-            if (iconRes != null) {
-                Icon(
+            when {
+                service.isCustom && service.faviconUrl != null -> Favicon(service, onColor)
+                iconRes != null -> Icon(
                     painter = painterResource(iconRes),
                     contentDescription = service.name,
                     tint = onColor,
                     modifier = Modifier.size(34.dp),
                 )
-            } else {
-                Text(
-                    text = service.monogram,
-                    color = onColor,
-                    fontSize = 30.sp,
-                    fontWeight = FontWeight.Bold,
-                )
+                else -> Monogram(service.monogram, onColor)
             }
         }
         Text(
             text = service.name,
+            style = MaterialTheme.typography.labelMedium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(top = 8.dp),
+        )
+    }
+}
+
+@Composable
+private fun Favicon(service: AppService, fallbackColor: Color) {
+    SubcomposeAsyncImage(
+        model = service.faviconUrl,
+        contentDescription = service.name,
+        modifier = Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)),
+    ) {
+        if (painter.state is AsyncImagePainter.State.Success) {
+            SubcomposeAsyncImageContent()
+        } else {
+            Monogram(service.monogram, fallbackColor)
+        }
+    }
+}
+
+@Composable
+private fun Monogram(text: String, color: Color) {
+    Text(text = text, color = color, fontSize = 30.sp, fontWeight = FontWeight.Bold)
+}
+
+@Composable
+private fun AddTile(onClick: () -> Unit) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f)
+                .clip(RoundedCornerShape(24.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .clickable(onClick = onClick),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                Icons.Rounded.Add,
+                contentDescription = "Add custom site",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(34.dp),
+            )
+        }
+        Text(
+            text = "Add",
             style = MaterialTheme.typography.labelMedium,
             modifier = Modifier.padding(top = 8.dp),
         )
