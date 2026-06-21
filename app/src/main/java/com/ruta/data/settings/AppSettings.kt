@@ -1,0 +1,16 @@
+package com.ruta.data.settings
+
+import com.ruta.ui.theme.ThemeMode
+
+data class AppSettings(
+    val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    val dynamicColor: Boolean = true,
+    val adBlockEnabled: Boolean = true,
+    val cosmeticFilteringEnabled: Boolean = true,
+    val scrubFeedAds: Boolean = true,
+    val stripTrackingParams: Boolean = true,
+    val doubleBackToExit: Boolean = true,
+    val separateProfilePerSite: Boolean = false,
+    val proxyEnabled: Boolean = false,
+    val proxyUrl: String = "",
+)

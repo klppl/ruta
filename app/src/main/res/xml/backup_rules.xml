@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <!-- WebView cookies/storage are intentionally excluded from cloud backup. -->
+    <exclude domain="database" path="webview.db" />
+    <exclude domain="file" path="app_webview" />
+</full-backup-content>
