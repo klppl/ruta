@@ -9,6 +9,10 @@ This is a clean-room implementation. The filter-list parser, content scripts and
 engine are original; EasyList / EasyPrivacy are consumed as runtime data assets with
 attribution (see the in-app About screen).
 
+<p align="center">
+  <img src="screenshot.png" alt="ruta launcher — social service grid, profile chips and dock" width="300">
+</p>
+
 ## Stack
 
 - Kotlin, single-module Android app (min SDK 26, target SDK 35)
