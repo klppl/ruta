@@ -20,7 +20,6 @@ fun interface PageMessageListener {
 }
 
 data class ContentConfig(
-    val scrubFeedAds: Boolean,
     val stripTrackingParams: Boolean,
 )
 
@@ -47,7 +46,6 @@ class ContentScriptInjector @Inject constructor(
     private fun prelude(config: ContentConfig): String =
         "window.__rutaConfig=" + JSONObject(
             mapOf(
-                "scrubFeedAds" to config.scrubFeedAds,
                 "stripTrackingParams" to config.stripTrackingParams,
             ),
         ).toString() + ";"
@@ -93,7 +91,6 @@ class ContentScriptInjector @Inject constructor(
     fun reconfigure(webView: WebView, config: ContentConfig) {
         val obj = JSONObject(
             mapOf(
-                "scrubFeedAds" to config.scrubFeedAds,
                 "stripTrackingParams" to config.stripTrackingParams,
             ),
         )

@@ -60,7 +60,6 @@ class SettingsViewModel @Inject constructor(
     fun setAutoHideDock(v: Boolean) = launch { settingsRepository.setAutoHideDock(v) }
     fun setAdBlock(v: Boolean) = launch { settingsRepository.setAdBlock(v) }
     fun setCosmetic(v: Boolean) = launch { settingsRepository.setCosmetic(v) }
-    fun setScrubFeed(v: Boolean) = launch { settingsRepository.setScrubFeed(v) }
     fun setStripParams(v: Boolean) = launch { settingsRepository.setStripParams(v) }
     fun setDoubleBack(v: Boolean) = launch { settingsRepository.setDoubleBack(v) }
     fun setPerSiteProfile(v: Boolean) = launch { settingsRepository.setPerSiteProfile(v) }

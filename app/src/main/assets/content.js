@@ -10,7 +10,6 @@
   if (window.__ruta) return;
 
   var cfg = window.__rutaConfig || {};
-  var SCRUB = cfg.scrubFeedAds !== false;
   var STRIP = cfg.stripTrackingParams !== false;
   var HOST = (location.hostname || "").toLowerCase();
 
@@ -356,7 +355,6 @@
     probeElement: probeElement,
     configure: function (next) {
       if (!next) return;
-      if (typeof next.scrubFeedAds === "boolean") SCRUB = next.scrubFeedAds;
       if (typeof next.stripTrackingParams === "boolean") STRIP = next.stripTrackingParams;
     },
   };

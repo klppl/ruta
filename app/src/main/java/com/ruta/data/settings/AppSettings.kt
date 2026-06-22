@@ -11,7 +11,6 @@ data class AppSettings(
     val autoHideDock: Boolean = true,
     val adBlockEnabled: Boolean = true,
     val cosmeticFilteringEnabled: Boolean = true,
-    val scrubFeedAds: Boolean = true,
     val stripTrackingParams: Boolean = true,
     val doubleBackToExit: Boolean = true,
     val separateProfilePerSite: Boolean = false,

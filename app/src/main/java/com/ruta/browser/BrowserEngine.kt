@@ -371,7 +371,6 @@ class BrowserEngine @Inject constructor(
     }
 
     private fun contentConfig() = ContentConfig(
-        scrubFeedAds = currentSettings.scrubFeedAds,
         stripTrackingParams = currentSettings.stripTrackingParams,
     )
 

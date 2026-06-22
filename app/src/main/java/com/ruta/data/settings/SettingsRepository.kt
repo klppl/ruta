@@ -24,7 +24,6 @@ class SettingsRepository @Inject constructor(
         val autoHideDock = booleanPreferencesKey("auto_hide_dock")
         val adBlock = booleanPreferencesKey("ad_block")
         val cosmetic = booleanPreferencesKey("cosmetic")
-        val scrubFeed = booleanPreferencesKey("scrub_feed")
         val stripParams = booleanPreferencesKey("strip_params")
         val doubleBack = booleanPreferencesKey("double_back")
         val perSiteProfile = booleanPreferencesKey("per_site_profile")
@@ -43,7 +42,6 @@ class SettingsRepository @Inject constructor(
             autoHideDock = p[Keys.autoHideDock] ?: true,
             adBlockEnabled = p[Keys.adBlock] ?: true,
             cosmeticFilteringEnabled = p[Keys.cosmetic] ?: true,
-            scrubFeedAds = p[Keys.scrubFeed] ?: true,
             stripTrackingParams = p[Keys.stripParams] ?: true,
             doubleBackToExit = p[Keys.doubleBack] ?: true,
             separateProfilePerSite = p[Keys.perSiteProfile] ?: false,
@@ -60,7 +58,6 @@ class SettingsRepository @Inject constructor(
     suspend fun setAutoHideDock(value: Boolean) = edit { it[Keys.autoHideDock] = value }
     suspend fun setAdBlock(value: Boolean) = edit { it[Keys.adBlock] = value }
     suspend fun setCosmetic(value: Boolean) = edit { it[Keys.cosmetic] = value }
-    suspend fun setScrubFeed(value: Boolean) = edit { it[Keys.scrubFeed] = value }
     suspend fun setStripParams(value: Boolean) = edit { it[Keys.stripParams] = value }
     suspend fun setDoubleBack(value: Boolean) = edit { it[Keys.doubleBack] = value }
     suspend fun setPerSiteProfile(value: Boolean) = edit { it[Keys.perSiteProfile] = value }

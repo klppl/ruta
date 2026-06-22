@@ -131,7 +131,6 @@ fun SettingsScreen(
             Section("Privacy & blocking")
             SettingSwitch("Block ads & trackers", settings.adBlockEnabled, viewModel::setAdBlock)
             SettingSwitch("Cosmetic filtering (hide elements)", settings.cosmeticFilteringEnabled, viewModel::setCosmetic)
-            SettingSwitch("Scrub promoted posts in feeds", settings.scrubFeedAds, viewModel::setScrubFeed)
             SettingSwitch("Strip tracking params on copy", settings.stripTrackingParams, viewModel::setStripParams)
             Row(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
