@@ -140,14 +140,17 @@ private fun ServiceTile(service: AppService, onClick: () -> Unit, onLongClick: (
             contentAlignment = Alignment.Center,
         ) {
             val iconRes = brandIconRes(service.id)
+            // No bundled glyph (Play flavor, or a custom site) -> use the site's own favicon.
+            val faviconUrl = service.faviconUrl
+                ?: if (iconRes == null) "https://icons.duckduckgo.com/ip3/${service.host}.ico" else null
             when {
-                service.isCustom && service.faviconUrl != null -> Favicon(service, onColor)
                 iconRes != null -> Icon(
                     painter = painterResource(iconRes),
                     contentDescription = service.name,
                     tint = onColor,
                     modifier = Modifier.size(34.dp),
                 )
+                faviconUrl != null -> Favicon(faviconUrl, service.name, service.monogram, onColor)
                 else -> Monogram(service.monogram, onColor)
             }
         }
@@ -162,10 +165,10 @@ private fun ServiceTile(service: AppService, onClick: () -> Unit, onLongClick: (
 }
 
 @Composable
-private fun Favicon(service: AppService, fallbackColor: Color) {
+private fun Favicon(url: String, name: String, monogram: String, fallbackColor: Color) {
     SubcomposeAsyncImage(
-        model = service.faviconUrl,
-        contentDescription = service.name,
+        model = url,
+        contentDescription = name,
         contentScale = ContentScale.Crop,
         modifier = Modifier.fillMaxSize(),
     ) {
@@ -173,7 +176,7 @@ private fun Favicon(service: AppService, fallbackColor: Color) {
             SubcomposeAsyncImageContent()
         } else {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Monogram(service.monogram, fallbackColor)
+                Monogram(monogram, fallbackColor)
             }
         }
     }

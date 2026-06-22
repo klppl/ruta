@@ -122,7 +122,8 @@ private fun DockItem(
     val service = Services.forHost(host)
     val accent = accentForProfile(tab.profileId)
     val iconRes = service?.let { brandIconRes(it.id) }
-    val faviconUrl = if (service == null && host != null) "https://icons.duckduckgo.com/ip3/$host.ico" else null
+    // No bundled glyph (Play flavor, or a non-built-in site) -> the site's own favicon.
+    val faviconUrl = if (iconRes == null && host != null) "https://icons.duckduckgo.com/ip3/$host.ico" else null
 
     val interaction = if (editMode) {
         dragHandle.clickable(onClick = onClick)

@@ -15,7 +15,9 @@ android {
         applicationId = "io.github.klppl.ruta"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
+        // CI passes a monotonic versionCode (the workflow run number) for Play uploads;
+        // local builds default to 1. versionName stays manual — bump it for real releases.
+        versionCode = System.getenv("RUTA_VERSION_CODE")?.toIntOrNull() ?: 1
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
