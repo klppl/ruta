@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Download
-import androidx.compose.material.icons.rounded.OpenInNew
+import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.PersonAdd
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -43,7 +43,7 @@ fun ContextSheet(
             )
         }
         if (target.link != null) {
-            ActionRow(Icons.Rounded.OpenInNew, "Open in new tab", onOpenNewTab)
+            ActionRow(Icons.AutoMirrored.Rounded.OpenInNew, "Open in new tab", onOpenNewTab)
             ActionRow(Icons.Rounded.PersonAdd, "Open in new profile", onOpenNewProfile)
             ActionRow(Icons.Rounded.ContentCopy, "Copy link", onCopyLink)
         }

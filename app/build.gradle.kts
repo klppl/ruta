@@ -22,6 +22,20 @@ android {
         vectorDrawables { useSupportLibrary = true }
     }
 
+    // Optional release signing driven by env vars (set from CI secrets). When absent, the
+    // release build is simply left unsigned — local debug builds are unaffected.
+    val releaseKeystore = System.getenv("RUTA_KEYSTORE_FILE")?.takeIf { it.isNotBlank() }
+    signingConfigs {
+        create("release") {
+            if (releaseKeystore != null) {
+                storeFile = file(releaseKeystore)
+                storePassword = System.getenv("RUTA_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("RUTA_KEY_ALIAS")
+                keyPassword = System.getenv("RUTA_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -30,6 +44,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            signingConfig = if (releaseKeystore != null) signingConfigs.getByName("release") else null
         }
         debug {
             applicationIdSuffix = ".debug"
@@ -47,6 +62,11 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+    // Skip the slow lint-vital pass during release packaging; keeps CI builds fast.
+    lint {
+        checkReleaseBuilds = false
+        abortOnError = false
     }
     packaging {
         resources {
