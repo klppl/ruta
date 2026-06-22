@@ -107,37 +107,22 @@
     if (captured.length > 200) captured.shift();
   }
 
-  // -------------------------------------------------------- feed scrubbing ---
-  var AD_KEYS = [
-    "promotedMetadata", "promoted_metadata", "scribeData", "ad_id", "adMetadata",
-    "is_ad", "injected", "sponsored", "is_paid_partnership", "ad_action",
-  ];
-  function looksLikeAd(obj) {
-    if (!obj || typeof obj !== "object") return false;
-    for (var i = 0; i < AD_KEYS.length; i++) {
-      if (Object.prototype.hasOwnProperty.call(obj, AD_KEYS[i])) return true;
-    }
-    var eid = obj.entryId || obj.entryid;
-    if (typeof eid === "string" && (eid.indexOf("promoted") >= 0 || eid.indexOf("ad-slot") >= 0)) return true;
-    return false;
+  // ----------------------------------------------- media capture (read-only) ---
+  // IMPORTANT: we never rewrite response bodies. Meta/X APIs use 64-bit integer IDs that
+  // exceed JS's safe integer range, so JSON.parse->JSON.stringify silently corrupts them and
+  // breaks the app ("page can't load"). We only read a throwaway copy to harvest media URLs
+  // for the download feature; promoted-post hiding is left to cosmetic filters.
+  function interestingUrl(url) {
+    if (!url) return false;
+    return /graphql|timeline|\/api\/|\/i\/api\/|HomeTimeline|feed|aweme/i.test(url);
   }
 
-  // Recursively walk JSON: drop ad array entries, capture media. Returns true if mutated.
-  function walk(node, depth) {
-    if (depth > 40 || !node || typeof node !== "object") return false;
-    var changed = false;
+  function scanMedia(node, depth) {
+    if (depth > 40 || !node || typeof node !== "object") return;
     if (Array.isArray(node)) {
-      for (var i = node.length - 1; i >= 0; i--) {
-        if (SCRUB && looksLikeAd(node[i])) {
-          node.splice(i, 1);
-          changed = true;
-        } else if (walk(node[i], depth + 1)) {
-          changed = true;
-        }
-      }
-      return changed;
+      for (var i = 0; i < node.length; i++) scanMedia(node[i], depth + 1);
+      return;
     }
-    // media capture
     if (node.video_info && node.video_info.variants) {
       node.video_info.variants.forEach(function (v) {
         if (v && v.content_type === "video/mp4") remember(v.url, "video", v.bitrate || 0);
@@ -149,85 +134,60 @@
     if (typeof node.playAddr === "string") remember(node.playAddr, "video", 1);
     if (typeof node.downloadAddr === "string") remember(node.downloadAddr, "video", 2);
     for (var k in node) {
-      if (Object.prototype.hasOwnProperty.call(node, k)) {
-        if (walk(node[k], depth + 1)) changed = true;
-      }
+      if (Object.prototype.hasOwnProperty.call(node, k)) scanMedia(node[k], depth + 1);
     }
-    return changed;
   }
 
-  function interestingUrl(url) {
-    if (!url) return false;
-    return /graphql|timeline|\/api\/|\/i\/api\/|HomeTimeline|feed|aweme/i.test(url);
-  }
-
-  function transformBody(url, text) {
-    if (!interestingUrl(url) || !text || text.charAt(0) !== "{") return null;
+  // Parse a throwaway copy purely to capture media URLs. Never returns/replaces anything.
+  function captureMedia(url, text) {
+    if (!interestingUrl(url) || !text || text.charAt(0) !== "{") return;
     var data;
     try {
       data = JSON.parse(text);
     } catch (e) {
-      return null;
+      return;
     }
-    var changed = walk(data, 0);
-    return changed ? JSON.stringify(data) : null;
+    try {
+      scanMedia(data, 0);
+    } catch (e) {}
   }
 
-  // fetch wrapper
+  // fetch: read a clone for media capture, always return the original untouched response.
   if (window.fetch) {
     var realFetch = window.fetch;
     window.fetch = function (input, init) {
       return realFetch.call(this, input, init).then(function (resp) {
         var url = typeof input === "string" ? input : input && input.url;
-        if (!interestingUrl(url)) return resp;
-        return resp
-          .clone()
-          .text()
-          .then(function (text) {
-            var t = transformBody(url, text);
-            if (t == null) return resp;
-            var headers = new Headers(resp.headers);
-            return new Response(t, { status: resp.status, statusText: resp.statusText, headers: headers });
-          })
-          .catch(function () {
-            return resp;
-          });
+        if (interestingUrl(url)) {
+          resp.clone().text().then(function (text) { captureMedia(url, text); }).catch(function () {});
+        }
+        return resp;
       });
     };
   }
 
-  // XHR wrapper — override prototype getters so handler order doesn't matter.
+  // XHR: observe completed responses for media capture; never modify the response.
   (function () {
     var proto = XMLHttpRequest.prototype;
     var realOpen = proto.open;
+    var realSend = proto.send;
     proto.open = function (method, url) {
       this.__rutaUrl = url;
       return realOpen.apply(this, arguments);
     };
-    function override(prop) {
-      var desc = Object.getOwnPropertyDescriptor(proto, prop);
-      if (!desc || !desc.get) return;
-      var realGet = desc.get;
-      Object.defineProperty(proto, prop, {
-        configurable: true,
-        get: function () {
-          var raw = realGet.call(this);
-          if (this.readyState !== 4 || !this.__rutaUrl) return raw;
-          if (this.__rutaCache !== undefined) return this.__rutaCache;
-          // Only text responses can be rewritten; leave json/blob/arraybuffer untouched.
-          if (typeof raw !== "string") return raw;
-          var t = transformBody(this.__rutaUrl, raw);
-          if (t == null) {
-            this.__rutaCache = raw;
-            return raw;
-          }
-          this.__rutaCache = t;
-          return t;
-        },
-      });
-    }
-    override("responseText");
-    override("response");
+    proto.send = function () {
+      var xhr = this;
+      if (xhr.__rutaUrl && interestingUrl(xhr.__rutaUrl)) {
+        xhr.addEventListener("load", function () {
+          try {
+            if (xhr.responseType === "" || xhr.responseType === "text") {
+              captureMedia(xhr.__rutaUrl, xhr.responseText);
+            }
+          } catch (e) {}
+        });
+      }
+      return realSend.apply(this, arguments);
+    };
   })();
 
   // ------------------------------------------------------- media resolution ---

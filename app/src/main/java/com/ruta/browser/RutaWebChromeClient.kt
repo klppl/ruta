@@ -2,11 +2,14 @@ package com.ruta.browser
 
 import android.net.Uri
 import android.os.Message
+import android.util.Log
+import android.webkit.ConsoleMessage
 import android.webkit.GeolocationPermissions
 import android.webkit.PermissionRequest
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebView
+import com.ruta.BuildConfig
 
 class RutaWebChromeClient(
     private val onProgress: (Int) -> Unit,
@@ -16,6 +19,13 @@ class RutaWebChromeClient(
     private val onFileChooser: (ValueCallback<Array<Uri>>, FileChooserParams) -> Boolean,
     private val onPermission: (PermissionRequest) -> Unit,
 ) : WebChromeClient() {
+
+    override fun onConsoleMessage(message: ConsoleMessage): Boolean {
+        if (BuildConfig.DEBUG && message.messageLevel() == ConsoleMessage.MessageLevel.ERROR) {
+            Log.d("rutaConsole", "${message.message()} @ ${message.sourceId()}:${message.lineNumber()}")
+        }
+        return super.onConsoleMessage(message)
+    }
 
     override fun onProgressChanged(view: WebView, newProgress: Int) {
         onProgress(newProgress)
