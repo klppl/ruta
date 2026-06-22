@@ -66,8 +66,15 @@ fun AboutScreen(onBack: () -> Unit) {
 
             Heading("Privacy")
             Body(
-                "No analytics, no accounts, no cloud sync. Cookies and storage are isolated per " +
-                    "profile and excluded from device backups.",
+                "No analytics, no accounts, no ads, and no third-party tracking SDKs — ruta never " +
+                    "reports on you. Its only background network calls are downloading the ad-block " +
+                    "lists and fetching site icons (via DuckDuckGo's icon service); everything else " +
+                    "is just the sites you open.",
+            )
+            Body(
+                "Cookies and logins are isolated per profile and kept on your device — app data is " +
+                    "excluded from cloud backup. The sites you visit can still see your activity as " +
+                    "usual; ruta blocks their ads and trackers but doesn't make them anonymous.",
             )
         }
     }

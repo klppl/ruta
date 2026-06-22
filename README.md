@@ -21,7 +21,7 @@ blocked. No separate apps, no clutter, no tracking.
 - **Download videos & images** straight from Instagram, TikTok and X.
 - **Cleaner links** — strips `utm_*`, `fbclid` and other tracking junk when you copy.
 - **Make it yours** — per-site custom CSS, a built-in proxy, desktop-site toggle, hide the address bar.
-- **Genuinely private** — no accounts, no analytics, no cloud. Everything stays on your phone.
+- **No tracking, no ads, no accounts** — zero analytics or third-party SDKs; ruta never reports on you. Its only own network calls are for ad-block lists and site icons.
 - **Modern & beautiful** — Material You design with dynamic color, dark/light, edge-to-edge.
 
 ## Install
