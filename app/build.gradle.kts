@@ -8,11 +8,11 @@ plugins {
 }
 
 android {
-    namespace = "com.ruta"
+    namespace = "io.github.klppl.ruta"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.ruta"
+        applicationId = "io.github.klppl.ruta"
         minSdk = 26
         targetSdk = 35
         versionCode = 1

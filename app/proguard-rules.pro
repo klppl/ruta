@@ -7,10 +7,10 @@
 -keepattributes *Annotation*, InnerClasses
 -dontnote kotlinx.serialization.**
 -keepclassmembers class **$$serializer { *; }
--keepclasseswithmembers class com.ruta.** {
+-keepclasseswithmembers class io.github.klppl.ruta.** {
     kotlinx.serialization.KSerializer serializer(...);
 }
--keep,includedescriptorclasses class com.ruta.**$$serializer { *; }
+-keep,includedescriptorclasses class io.github.klppl.ruta.**$$serializer { *; }
 
 # Hilt / WorkManager generated
--keep class com.ruta.Hilt_* { *; }
+-keep class io.github.klppl.ruta.Hilt_* { *; }

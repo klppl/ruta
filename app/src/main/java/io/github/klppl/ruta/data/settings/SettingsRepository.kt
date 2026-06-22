@@ -1,0 +1,70 @@
+package io.github.klppl.ruta.data.settings
+
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
+import io.github.klppl.ruta.ui.theme.ThemeMode
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import javax.inject.Inject
+import javax.inject.Singleton
+
+@Singleton
+class SettingsRepository @Inject constructor(
+    private val dataStore: DataStore<Preferences>,
+) {
+    private object Keys {
+        val themeMode = stringPreferencesKey("theme_mode")
+        val dynamicColor = booleanPreferencesKey("dynamic_color")
+        val forceDarkWeb = booleanPreferencesKey("force_dark_web")
+        val showAddressBar = booleanPreferencesKey("show_address_bar")
+        val addressBarTop = booleanPreferencesKey("address_bar_top")
+        val autoHideDock = booleanPreferencesKey("auto_hide_dock")
+        val adBlock = booleanPreferencesKey("ad_block")
+        val cosmetic = booleanPreferencesKey("cosmetic")
+        val stripParams = booleanPreferencesKey("strip_params")
+        val doubleBack = booleanPreferencesKey("double_back")
+        val perSiteProfile = booleanPreferencesKey("per_site_profile")
+        val proxyEnabled = booleanPreferencesKey("proxy_enabled")
+        val proxyUrl = stringPreferencesKey("proxy_url")
+    }
+
+    val settings: Flow<AppSettings> = dataStore.data.map { p ->
+        AppSettings(
+            themeMode = p[Keys.themeMode]?.let { runCatching { ThemeMode.valueOf(it) }.getOrNull() }
+                ?: ThemeMode.SYSTEM,
+            dynamicColor = p[Keys.dynamicColor] ?: true,
+            forceDarkWebsites = p[Keys.forceDarkWeb] ?: true,
+            showAddressBar = p[Keys.showAddressBar] ?: true,
+            addressBarAtTop = p[Keys.addressBarTop] ?: false,
+            autoHideDock = p[Keys.autoHideDock] ?: true,
+            adBlockEnabled = p[Keys.adBlock] ?: true,
+            cosmeticFilteringEnabled = p[Keys.cosmetic] ?: true,
+            stripTrackingParams = p[Keys.stripParams] ?: true,
+            doubleBackToExit = p[Keys.doubleBack] ?: true,
+            separateProfilePerSite = p[Keys.perSiteProfile] ?: false,
+            proxyEnabled = p[Keys.proxyEnabled] ?: false,
+            proxyUrl = p[Keys.proxyUrl] ?: "",
+        )
+    }
+
+    suspend fun setThemeMode(mode: ThemeMode) = edit { it[Keys.themeMode] = mode.name }
+    suspend fun setDynamicColor(value: Boolean) = edit { it[Keys.dynamicColor] = value }
+    suspend fun setForceDarkWebsites(value: Boolean) = edit { it[Keys.forceDarkWeb] = value }
+    suspend fun setShowAddressBar(value: Boolean) = edit { it[Keys.showAddressBar] = value }
+    suspend fun setAddressBarAtTop(value: Boolean) = edit { it[Keys.addressBarTop] = value }
+    suspend fun setAutoHideDock(value: Boolean) = edit { it[Keys.autoHideDock] = value }
+    suspend fun setAdBlock(value: Boolean) = edit { it[Keys.adBlock] = value }
+    suspend fun setCosmetic(value: Boolean) = edit { it[Keys.cosmetic] = value }
+    suspend fun setStripParams(value: Boolean) = edit { it[Keys.stripParams] = value }
+    suspend fun setDoubleBack(value: Boolean) = edit { it[Keys.doubleBack] = value }
+    suspend fun setPerSiteProfile(value: Boolean) = edit { it[Keys.perSiteProfile] = value }
+    suspend fun setProxyEnabled(value: Boolean) = edit { it[Keys.proxyEnabled] = value }
+    suspend fun setProxyUrl(value: String) = edit { it[Keys.proxyUrl] = value }
+
+    private suspend fun edit(block: (androidx.datastore.preferences.core.MutablePreferences) -> Unit) {
+        dataStore.edit(block)
+    }
+}

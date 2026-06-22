@@ -15,7 +15,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write   # needed to publish a GitHub Release
 
 concurrency:
   group: release-apk
@@ -65,3 +65,14 @@ jobs:
           path: app/build/outputs/apk/release/*.apk
           if-no-files-found: error
           retention-days: 14
+
+      # Publish the APK as a GitHub Release so it shows under the repo's Releases tab.
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="build-${{ github.run_number }}"
+          gh release create "$TAG" app/build/outputs/apk/release/*.apk \
+            --title "ruta build ${{ github.run_number }}" \
+            --notes "Automated release build from commit ${{ github.sha }}." \
+            --target "${{ github.sha }}"
