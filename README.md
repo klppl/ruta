@@ -10,8 +10,11 @@ engine are original; EasyList / EasyPrivacy are consumed as runtime data assets 
 attribution (see the in-app About screen).
 
 <p align="center">
-  <img src="screenshot.png" alt="ruta launcher — social service grid, profile chips and dock" width="300">
+  <img src="screenshot.png" alt="ruta launcher — social service grid and profile chips" width="270">
+  &nbsp;&nbsp;
+  <img src="screenshot2.png" alt="ruta wrapping Mastodon with the account dock at the bottom" width="270">
 </p>
+<p align="center"><sub>The new-tab launcher · a wrapped site (Mastodon) with the account switcher dock</sub></p>
 
 ## Stack
 
