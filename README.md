@@ -1,93 +1,39 @@
 # ruta
 
-A clean, minimalist **social browser** for Android. It wraps social-network websites (X,
-Instagram, Facebook, TikTok, Reddit, Bluesky, Threads, LinkedIn, Tumblr, Mastodon) in a
-Compose + WebView shell with built-in ad/tracker blocking, multi-account isolation, and
-in-feed media download.
+**One calm, private home for all your social feeds.**
 
-This is a clean-room implementation. The filter-list parser, content scripts and blocking
-engine are original; EasyList / EasyPrivacy are consumed as runtime data assets with
-attribution (see the in-app About screen).
+ruta puts the social sites you already use — X, Instagram, Facebook, TikTok, Reddit, Bluesky,
+Threads, LinkedIn, Tumblr and Mastodon — into a single clean Android app, with ads and trackers
+blocked. No separate apps, no clutter, no tracking.
 
 <p align="center">
-  <img src="screenshot.png" alt="ruta launcher — social service grid and profile chips" width="270">
+  <img src="screenshot.png" alt="ruta launcher — social service grid" width="270">
   &nbsp;&nbsp;
-  <img src="screenshot2.png" alt="ruta wrapping Mastodon with the account dock at the bottom" width="270">
+  <img src="screenshot2.png" alt="ruta wrapping Mastodon with the account dock" width="270">
 </p>
-<p align="center"><sub>The new-tab launcher · a wrapped site (Mastodon) with the account switcher dock</sub></p>
 
-## Stack
+## Features
 
-- Kotlin, single-module Android app (min SDK 26, target SDK 35)
-- Jetpack Compose + Material 3 (dynamic color / Material You), edge-to-edge
-- `android.webkit.WebView` + **androidx.webkit** (`WebViewCompat`, `ProfileStore`,
-  `ProxyController`, document-start scripts, web-message channel)
-- Coroutines + StateFlow, Jetpack DataStore (Preferences)
-- Hilt for DI, Navigation Compose (Home / Settings / About)
-- OkHttp + kotlinx-serialization for fetching filter lists, WorkManager for refresh
+- **All your feeds, one app.** A simple grid of social sites — tap to open. Add any other site too.
+- **Ads & trackers blocked** out of the box (EasyList + EasyPrivacy). Add your own filter lists anytime.
+- **Multiple accounts, kept separate.** Each account gets its own isolated profile; flick between them from the bottom dock.
+- **Force dark mode** on any website — on by default.
+- **Download videos & images** straight from Instagram, TikTok and X.
+- **Cleaner links** — strips `utm_*`, `fbclid` and other tracking junk when you copy.
+- **Make it yours** — per-site custom CSS, a built-in proxy, desktop-site toggle, hide the address bar.
+- **Genuinely private** — no accounts, no analytics, no cloud. Everything stays on your phone.
+- **Modern & beautiful** — Material You design with dynamic color, dark/light, edge-to-edge.
 
-## Architecture
+## Install
 
-```
-app/
-  RutaApp, MainActivity
-  di/            Hilt modules (DataStore, OkHttp)
-  ui/
-    theme/       Material 3 theme, dynamic color, per-profile accents
-    home/        BrowserViewModel, HomeScreen, ServiceLauncher, WebViewHost, UrlEditOverlay
-    tabswitcher/ TabSwitcher card grid
-    settings/    SettingsScreen, SettingsViewModel, AboutScreen
-    components/   AddressPill, ControlsSheet, ContextSheet, ProfileChips
-  browser/
-    BrowserEngine        creates/configures WebViews, owns clients + bridge
-    RutaWebViewClient    network blocking in shouldInterceptRequest
-    RutaWebChromeClient  popups, file chooser, permissions, progress/title
-    ContentScriptInjector document-start injection + page↔native messaging
-    MediaResolver        DownloadManager + MediaStore (blob) saving
-    UserAgentProvider    UA derived from installed WebView, desktop override
-    WebViewPool          one live WebView per tab id
-  blocking/
-    AbpParser            clean-room ABP + hostfile parser
-    RequestBlocker       longest-suffix host matching (allow wins at deeper label)
-    CosmeticRules        ## / #@# element-hiding with domain restriction
-    BlocklistRepository  download + cache (ETag / Expires) + parse off-thread
-    BlocklistRefreshWorker
-  profile/        ProfileManager (ProfileStore multi-account isolation)
-  data/           DataStore-backed repositories (settings / styles / tabs)
-  util/           UrlSanitizer (tracking-param stripping), Hosts
-  assets/content.js  page-side script (feed scrubbing, cosmetic CSS, media, clipboard)
-content-src/      esbuild pipeline for the content script (optional)
-```
+- **Download the APK** from the [Releases](../../releases) page and open it on your phone.
+- **F-Droid** — coming soon.
+- **Build it yourself** — open in Android Studio and run, or `./gradlew :app:assembleRelease`.
 
-Network blocking is native (in `shouldInterceptRequest`); cosmetic hiding, per-service feed
-ad-scrubbing, clipboard cleanup and media resolution run in the injected page script.
-
-## Building
-
-This project targets Android Studio (Ladybug or newer) with the Android SDK installed.
-
-```bash
-# from a machine with the Android SDK + a local.properties pointing at it
-./gradlew :app:assembleDebug
-```
-
-Open the folder in Android Studio and let it sync; it will provision the Gradle wrapper jar
-and SDK. The min toolchain: AGP 8.7, Kotlin 2.0.21, JDK 17.
-
-> Note: `gradle/wrapper/gradle-wrapper.jar` is intentionally not committed (binary). Android
-> Studio regenerates it on import, or run `gradle wrapper --gradle-version 8.11.1` once.
-
-## Status / roadmap
-
-Implemented in v1: WebView shell + tab pool, native ad/tracker blocking with runtime lists,
-cosmetic filtering, per-service feed scrubbing (X / Instagram heuristics), multi-account
-profiles, media download (Instagram / TikTok / X + blob fallback), tracking-param stripping,
-custom CSS, per-app proxy.
-
-Deferred (v2+): Facebook DASH/progressive extraction, in-WebView Google-OAuth shim,
-tab groups / split view, cloud sync.
+Works on Android 8.0+ (no Google services required).
 
 ## License
 
-App code: Apache License 2.0 (see `LICENSE`). EasyList / EasyPrivacy are dual GPLv3 /
-CC BY-SA 3.0 data assets used at runtime with attribution.
+Open source under the [Apache License 2.0](LICENSE). Ad/tracker blocking uses the community
+EasyList and EasyPrivacy lists (GPLv3 / CC BY-SA), downloaded at runtime — full attribution is in
+the app's About screen.
