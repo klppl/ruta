@@ -25,7 +25,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # Secrets are exposed as env vars here (the `secrets` context can't be used in step `if:`).
     env:
+      KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
       RUTA_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
       RUTA_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
       RUTA_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
@@ -44,10 +46,14 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Prepare signing key
-        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/release.keystore"
-          echo "RUTA_KEYSTORE_FILE=$RUNNER_TEMP/release.keystore" >> "$GITHUB_ENV"
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+            echo "RUTA_KEYSTORE_FILE=$RUNNER_TEMP/release.keystore" >> "$GITHUB_ENV"
+            echo "Signing enabled."
+          else
+            echo "No signing secrets set; building an unsigned release APK."
+          fi
 
       - name: Build release APK
         run: ./gradlew :app:assembleRelease --build-cache --stacktrace
