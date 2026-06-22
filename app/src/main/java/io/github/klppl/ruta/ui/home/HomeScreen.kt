@@ -71,9 +71,11 @@ fun HomeScreen(
     var editingUrl by remember { mutableStateOf(false) }
     var showAddCustom by remember { mutableStateOf(false) }
     var bookmarkToRemove by remember { mutableStateOf<AppService?>(null) }
+    var dockEditMode by remember { mutableStateOf(false) }
 
     BackHandler(enabled = true) {
-        if (editingUrl) editingUrl = false
+        if (dockEditMode) dockEditMode = false
+        else if (editingUrl) editingUrl = false
         else if (!viewModel.onBack()) onExit()
     }
 
@@ -92,7 +94,7 @@ fun HomeScreen(
                         url = current?.url.orEmpty(),
                         progress = current?.progress ?: 0,
                         accent = accent,
-                        onClick = { editingUrl = true },
+                        onClick = { dockEditMode = false; editingUrl = true },
                         modifier = Modifier.statusBarsPadding(),
                     )
                 }
@@ -129,7 +131,7 @@ fun HomeScreen(
                         LoadingLine(progress = current?.progress ?: 0, accent = accent)
                     }
                     AnimatedVisibility(
-                        visible = dockVisible || !settings.autoHideDock,
+                        visible = dockVisible || !settings.autoHideDock || dockEditMode,
                         enter = expandVertically() + fadeIn(),
                         exit = shrinkVertically() + fadeOut(),
                     ) {
@@ -141,17 +143,21 @@ fun HomeScreen(
                                 AccountDock(
                                     tabs = dockTabs,
                                     activeId = current?.id,
+                                    editMode = dockEditMode,
                                     onSelect = viewModel::selectTab,
                                     onReset = viewModel::resetToHome,
                                     onClose = viewModel::closeTab,
                                     onNewTab = { viewModel.addNewTab() },
+                                    onMove = viewModel::moveTab,
+                                    onEnterEdit = { dockEditMode = true },
+                                    onExitEdit = { dockEditMode = false },
                                     modifier = Modifier.weight(1f),
                                 )
                             } else {
                                 Spacer(Modifier.weight(1f))
                             }
                             FilledTonalIconButton(
-                                onClick = { showControls = true },
+                                onClick = { dockEditMode = false; showControls = true },
                                 modifier = Modifier.padding(end = 10.dp),
                             ) {
                                 Icon(Icons.Rounded.MoreVert, contentDescription = "Menu")
@@ -164,7 +170,7 @@ fun HomeScreen(
                             url = current?.url.orEmpty(),
                             progress = current?.progress ?: 0,
                             accent = accent,
-                            onClick = { editingUrl = true },
+                            onClick = { dockEditMode = false; editingUrl = true },
                         )
                     }
                 }

@@ -138,6 +138,16 @@ class BrowserViewModel @Inject constructor(
         _dockVisible.value = true
     }
 
+    /** Reorder the dock: [from]/[to] are indices within the visible (non-new) dock tabs. */
+    fun moveTab(from: Int, to: Int) {
+        val current = _tabs.value
+        val dock = current.filter { !it.isNewTab }
+        if (from !in dock.indices || to !in dock.indices || from == to) return
+        val reordered = dock.toMutableList().apply { add(to, removeAt(from)) }
+        val iter = reordered.iterator()
+        _tabs.value = current.map { if (!it.isNewTab) iter.next() else it }
+    }
+
     fun closeTab(id: String) {
         engine.destroyTab(id)
         val remaining = _tabs.value.filterNot { it.id == id }
