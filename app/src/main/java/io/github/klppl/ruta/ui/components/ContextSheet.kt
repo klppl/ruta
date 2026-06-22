@@ -28,6 +28,7 @@ fun ContextSheet(
     onOpenNewProfile: () -> Unit,
     onDownloadImage: () -> Unit,
     onCopyLink: () -> Unit,
+    showDownload: Boolean,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp)) {
@@ -47,7 +48,7 @@ fun ContextSheet(
             ActionRow(Icons.Rounded.PersonAdd, "Open in new profile", onOpenNewProfile)
             ActionRow(Icons.Rounded.ContentCopy, "Copy link", onCopyLink)
         }
-        if (target.image != null || target.video != null) {
+        if (showDownload && (target.image != null || target.video != null)) {
             ActionRow(Icons.Rounded.Download, "Download", onDownloadImage)
         }
     }

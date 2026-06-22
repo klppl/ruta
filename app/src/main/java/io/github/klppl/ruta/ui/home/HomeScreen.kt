@@ -40,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.klppl.ruta.BuildConfig
 import io.github.klppl.ruta.model.AppService
 import io.github.klppl.ruta.ui.components.AddressPill
 import io.github.klppl.ruta.ui.components.ContextSheet
@@ -217,6 +218,7 @@ fun HomeScreen(
                 onCopyLink = { showControls = false; viewModel.copyCurrentUrl() },
                 onToggleDesktop = { showControls = false; viewModel.toggleDesktopMode() },
                 onDownloadMedia = { showControls = false; viewModel.downloadMedia() },
+                showMedia = BuildConfig.MEDIA_DOWNLOAD,
                 onToggleAdBlock = viewModel::setAdBlockEnabled,
                 onShowTabs = { showControls = false; viewModel.setShowTabSwitcher(true) },
                 onOpenSettings = { showControls = false; onOpenSettings() },
@@ -233,6 +235,7 @@ fun HomeScreen(
                 onOpenNewProfile = { viewModel.openContextLinkInNewTab(newProfile = true) },
                 onDownloadImage = viewModel::downloadContextImage,
                 onCopyLink = viewModel::copyContextLink,
+                showDownload = BuildConfig.MEDIA_DOWNLOAD,
             )
         }
     }

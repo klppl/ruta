@@ -55,24 +55,28 @@ jobs:
             echo "No signing secrets set; building an unsigned release APK."
           fi
 
-      - name: Build release APK
-        run: ./gradlew :app:assembleRelease --build-cache --stacktrace
+      # "full" APK for the GitHub Release / F-Droid / sideloading (keeps all features).
+      # "play" AAB for the Play Console upload (omits the in-feed media downloader).
+      - name: Build full APK + Play AAB
+        run: ./gradlew :app:assembleFullRelease :app:bundlePlayRelease --build-cache --stacktrace
 
-      - name: Upload APK artifact
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ruta-release-apk
-          path: app/build/outputs/apk/release/*.apk
+          name: ruta-release
+          path: |
+            app/build/outputs/apk/full/release/*.apk
+            app/build/outputs/bundle/playRelease/*.aab
           if-no-files-found: error
           retention-days: 14
 
-      # Publish the APK as a GitHub Release so it shows under the repo's Releases tab.
+      # Publish the full APK as a GitHub Release (the .aab is for Play upload only).
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="build-${{ github.run_number }}"
-          gh release create "$TAG" app/build/outputs/apk/release/*.apk \
+          gh release create "$TAG" app/build/outputs/apk/full/release/*.apk \
             --title "ruta build ${{ github.run_number }}" \
             --notes "Automated release build from commit ${{ github.sha }}." \
             --target "${{ github.sha }}"
