@@ -24,20 +24,6 @@ android {
         vectorDrawables { useSupportLibrary = true }
     }
 
-    // Distribution flavors. "full" (F-Droid + direct APK) keeps everything; "play" omits the
-    // in-feed media downloader, which Google Play tends to reject.
-    flavorDimensions += "distribution"
-    productFlavors {
-        create("full") {
-            dimension = "distribution"
-            buildConfigField("boolean", "MEDIA_DOWNLOAD", "true")
-        }
-        create("play") {
-            dimension = "distribution"
-            buildConfigField("boolean", "MEDIA_DOWNLOAD", "false")
-        }
-    }
-
     // Optional release signing driven by env vars (set from CI secrets). When absent, the
     // release build is simply left unsigned — local debug builds are unaffected.
     val releaseKeystore = System.getenv("RUTA_KEYSTORE_FILE")?.takeIf { it.isNotBlank() }

@@ -40,7 +40,6 @@ fun ControlsSheet(
     onCopyLink: () -> Unit,
     onToggleDesktop: () -> Unit,
     onDownloadMedia: () -> Unit,
-    showMedia: Boolean,
     onToggleAdBlock: (Boolean) -> Unit,
     onShowTabs: () -> Unit,
     onOpenSettings: () -> Unit,
@@ -60,9 +59,7 @@ fun ControlsSheet(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             QuickAction(Icons.Rounded.Refresh, "Reload", Modifier.weight(1f), onReload)
-            if (showMedia) {
-                QuickAction(Icons.Rounded.Download, "Media", Modifier.weight(1f), onDownloadMedia)
-            }
+            QuickAction(Icons.Rounded.Download, "Media", Modifier.weight(1f), onDownloadMedia)
             QuickAction(Icons.Rounded.ContentCopy, "Copy", Modifier.weight(1f), onCopyLink)
             QuickAction(Icons.Rounded.Add, "New tab", Modifier.weight(1f), onNewTab)
         }
