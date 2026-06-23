@@ -14,6 +14,14 @@
 
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
+    <!-- See/launch external browsers for the "open external links in browser" feature (API 30+). -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+    </queries>
+
     <application
         android:name=".RutaApp"
         android:allowBackup="false"

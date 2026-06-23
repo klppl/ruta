@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.MutableContextWrapper
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.view.ContextThemeWrapper
 import android.os.Handler
@@ -197,6 +198,9 @@ class BrowserEngine @Inject constructor(
             onFinished = { url -> handlePageFinished(tab.id, webView, url, events) },
             onUrl = { url, canGoBack -> events.onUrlChanged(tab.id, url, canGoBack) },
             onExternalScheme = { uri -> openExternal(uri) },
+            onExternalLink = { current, target, mainFrame, gesture ->
+                maybeOpenExternally(current, target, mainFrame, gesture)
+            },
         )
 
         webView.webChromeClient = RutaWebChromeClient(
@@ -327,6 +331,43 @@ class BrowserEngine @Inject constructor(
     }
 
     /**
+     * Decides whether a clicked link should be handed off to the system browser. Only main-frame,
+     * user-initiated navigations that leave the current site's registrable domain qualify; auth
+     * domains (Google/Apple/etc. sign-in) are kept in-app so logins don't break.
+     */
+    private fun maybeOpenExternally(
+        currentUrl: String?,
+        target: Uri,
+        isMainFrame: Boolean,
+        userGesture: Boolean,
+    ): Boolean {
+        if (!currentSettings.openLinksExternally || !isMainFrame || !userGesture) return false
+        val currentDomain = Hosts.registrable(Hosts.hostOf(currentUrl)) ?: return false
+        val targetHost = target.host?.lowercase() ?: return false
+        val targetDomain = Hosts.registrable(targetHost) ?: return false
+        if (targetDomain == currentDomain) return false
+        if (KEEP_IN_APP.any { targetHost == it || targetHost.endsWith(".$it") }) return false
+        return openInExternalBrowser(target)
+    }
+
+    /** Opens [uri] in an external browser, excluding ruta itself to avoid looping back in. */
+    private fun openInExternalBrowser(uri: Uri): Boolean {
+        val pm = context.packageManager
+        val self = context.packageName
+        val probe = Intent(Intent.ACTION_VIEW, Uri.parse("https://example.com"))
+            .addCategory(Intent.CATEGORY_BROWSABLE)
+        val default = pm.resolveActivity(probe, PackageManager.MATCH_DEFAULT_ONLY)?.activityInfo?.packageName
+        val browser = default?.takeIf { it != self && it != "android" }
+            ?: pm.queryIntentActivities(probe, 0).map { it.activityInfo.packageName }.firstOrNull { it != self }
+            ?: return false // no other browser available — let the WebView load it
+        val intent = Intent(Intent.ACTION_VIEW, uri)
+            .addCategory(Intent.CATEGORY_BROWSABLE)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            .setPackage(browser)
+        return runCatching { context.startActivity(intent); true }.getOrDefault(false)
+    }
+
+    /**
      * Context used to create a WebView. Always Activity-backed (via [webViewHostContext]) so
      * autofill works. For force-dark we wrap it in a non-light theme — a [ContextThemeWrapper]
      * keeps the Activity in the base chain (unlike createConfigurationContext), so the page
@@ -375,4 +416,13 @@ class BrowserEngine @Inject constructor(
     )
 
     private fun String?.ifBlankNull(): String? = if (this.isNullOrBlank()) null else this
+
+    private companion object {
+        // Cross-domain navigations to these (sign-in / SSO providers) stay in-app so logging
+        // into a wrapped site doesn't get bounced out to the external browser.
+        val KEEP_IN_APP = listOf(
+            "google.com", "apple.com", "facebook.com", "microsoft.com", "microsoftonline.com",
+            "live.com", "okta.com", "auth0.com", "twitter.com", "x.com",
+        )
+    }
 }

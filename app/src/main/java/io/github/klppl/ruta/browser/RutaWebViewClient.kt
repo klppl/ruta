@@ -20,6 +20,7 @@ class RutaWebViewClient(
     private val onFinished: (url: String) -> Unit,
     private val onUrl: (url: String, canGoBack: Boolean) -> Unit,
     private val onExternalScheme: (Uri) -> Boolean,
+    private val onExternalLink: (currentUrl: String?, target: Uri, isMainFrame: Boolean, userGesture: Boolean) -> Boolean,
 ) : WebViewClient() {
 
     override fun shouldInterceptRequest(
@@ -34,9 +35,12 @@ class RutaWebViewClient(
     override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
         val uri = request.url
         val scheme = uri.scheme?.lowercase()
-        if (scheme == "http" || scheme == "https" || scheme == "about" || scheme == "blob" ||
-            scheme == "data" || scheme == "javascript"
-        ) {
+        if (scheme == "http" || scheme == "https") {
+            // Hand off links that leave the current site to the system browser (if enabled).
+            if (onExternalLink(view.url, uri, request.isForMainFrame, request.hasGesture())) return true
+            return false // otherwise let the WebView handle it
+        }
+        if (scheme == "about" || scheme == "blob" || scheme == "data" || scheme == "javascript") {
             return false // let the WebView handle it
         }
         return onExternalScheme(uri)
