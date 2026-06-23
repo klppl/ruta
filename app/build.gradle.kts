@@ -47,6 +47,8 @@ android {
                 "proguard-rules.pro",
             )
             signingConfig = if (releaseKeystore != null) signingConfigs.getByName("release") else null
+            // Bundle native debug symbols so Play can symbolicate native crashes/ANRs.
+            ndk { debugSymbolLevel = "FULL" }
         }
         debug {
             applicationIdSuffix = ".debug"
