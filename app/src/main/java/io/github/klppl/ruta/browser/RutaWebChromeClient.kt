@@ -15,7 +15,7 @@ class RutaWebChromeClient(
     private val onProgress: (Int) -> Unit,
     private val onTitle: (String) -> Unit,
     private val onCloseWindow: () -> Unit,
-    private val onCreateNewWindow: (Message) -> Boolean,
+    private val onCreateNewWindow: (source: WebView, userGesture: Boolean, resultMsg: Message) -> Boolean,
     private val onFileChooser: (ValueCallback<Array<Uri>>, FileChooserParams) -> Boolean,
     private val onPermission: (PermissionRequest) -> Unit,
 ) : WebChromeClient() {
@@ -40,7 +40,7 @@ class RutaWebChromeClient(
         isDialog: Boolean,
         isUserGesture: Boolean,
         resultMsg: Message,
-    ): Boolean = onCreateNewWindow(resultMsg)
+    ): Boolean = onCreateNewWindow(view, isUserGesture, resultMsg)
 
     override fun onCloseWindow(window: WebView) {
         onCloseWindow()

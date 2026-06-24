@@ -69,6 +69,8 @@ class BrowserEngine @Inject constructor(
     @Volatile private var currentSettings: AppSettings = AppSettings()
     private val desktopByTab = HashMap<String, Boolean>()
     private val darkByTab = HashMap<String, Boolean>()
+    // Popups awaiting their first navigation so we can route external links out to the browser.
+    private val pendingPopups = HashMap<String, PendingPopup>()
 
     /** Set by MainActivity to bridge file-chooser and permission flows to the Activity. */
     var fileChooserHandler: ((android.webkit.ValueCallback<Array<Uri>>, android.webkit.WebChromeClient.FileChooserParams) -> Boolean)? = null
@@ -123,6 +125,7 @@ class BrowserEngine @Inject constructor(
         pool.remove(tabId)
         desktopByTab.remove(tabId)
         darkByTab.remove(tabId)
+        pendingPopups.remove(tabId)
     }
 
     fun setDesktopMode(tabId: String, desktop: Boolean) {
@@ -189,11 +192,15 @@ class BrowserEngine @Inject constructor(
             tabId = tab.id,
             requestBlocker = requestBlocker,
             onStarted = { url, _ ->
-                events.onProgress(tab.id, 5)
-                if (contentScriptInjector.needsManualInjection) {
-                    contentScriptInjector.injectManually(webView, contentConfig())
+                // A deferred popup's first URL decides external-vs-in-app; if it was handed to the
+                // system browser, skip the rest (the WebView is being torn down).
+                if (!handlePopupFirstUrl(tab.id, url, events)) {
+                    events.onProgress(tab.id, 5)
+                    if (contentScriptInjector.needsManualInjection) {
+                        contentScriptInjector.injectManually(webView, contentConfig())
+                    }
+                    events.onUrlChanged(tab.id, url, webView.canGoBack())
                 }
-                events.onUrlChanged(tab.id, url, webView.canGoBack())
             },
             onFinished = { url -> handlePageFinished(tab.id, webView, url, events) },
             onUrl = { url, canGoBack -> events.onUrlChanged(tab.id, url, canGoBack) },
@@ -207,7 +214,7 @@ class BrowserEngine @Inject constructor(
             onProgress = { p -> events.onProgress(tab.id, p) },
             onTitle = { title -> events.onTitle(tab.id, title) },
             onCloseWindow = { events.onCloseTab(tab.id) },
-            onCreateNewWindow = { msg -> createPopup(tab, events, msg) },
+            onCreateNewWindow = { source, gesture, msg -> handleCreateWindow(tab, events, source, gesture, msg) },
             onFileChooser = { cb, params -> fileChooserHandler?.invoke(cb, params) ?: false },
             onPermission = { req -> permissionHandler?.invoke(req) ?: req.deny() },
         )
@@ -250,7 +257,22 @@ class BrowserEngine @Inject constructor(
         }
     }
 
-    private fun createPopup(parent: Tab, events: TabEvents, resultMsg: Message): Boolean {
+    /**
+     * A page asked to open a new window (target="_blank" / window.open). We can't decide here
+     * whether the destination is external — on SPA sites (Bluesky, X, …) the link isn't a plain
+     * anchor, so the hit-test result is empty and no URL is available yet. Instead we mint the popup
+     * WebView but keep it hidden, and let its first committed navigation ([handlePopupFirstUrl])
+     * decide: hand cross-site links to the system browser, or surface same-site/auth popups as a
+     * real in-app tab. Deferring the tab means the user never sees an in-app flash for links that
+     * leave the app.
+     */
+    private fun handleCreateWindow(
+        parent: Tab,
+        events: TabEvents,
+        source: WebView,
+        userGesture: Boolean,
+        resultMsg: Message,
+    ): Boolean {
         val childId = "tab:" + UUID.randomUUID().toString().take(8)
         val childTab = Tab(
             id = childId,
@@ -262,13 +284,47 @@ class BrowserEngine @Inject constructor(
         pool.put(childId, child)
         desktopByTab[childId] = parent.desktopMode
         darkByTab[childId] = currentSettings.forceDarkWebsites
-        events.onOpenPopup(childId, parent.profileId, parent.desktopMode)
+        pendingPopups[childId] = PendingPopup(
+            parentUrl = source.url,
+            profileId = parent.profileId,
+            desktopMode = parent.desktopMode,
+            userGesture = userGesture,
+        )
 
         val transport = resultMsg.obj as WebView.WebViewTransport
         transport.webView = child
         resultMsg.sendToTarget()
         return true
     }
+
+    /**
+     * First committed URL of a deferred popup (see [handleCreateWindow]). Returns true if the popup
+     * was consumed (handed to the external browser); false if it's a normal tab or was promoted to
+     * an in-app tab, in which case the caller continues normal page-start handling.
+     */
+    private fun handlePopupFirstUrl(childId: String, url: String, events: TabEvents): Boolean {
+        val pending = pendingPopups.remove(childId) ?: return false
+        val uri = runCatching { Uri.parse(url) }.getOrNull()
+        val scheme = uri?.scheme?.lowercase()
+        val external = pending.userGesture && uri != null && (scheme == "http" || scheme == "https") &&
+            maybeOpenExternally(pending.parentUrl, uri, isMainFrame = true, userGesture = true)
+        if (external) {
+            // Opened in the system browser — tear down the throwaway popup once this page-start
+            // callback unwinds (destroying a WebView mid-callback is unsafe).
+            main.post { pool.remove(childId) }
+            return true
+        }
+        // Staying in-app: surface the tab now that we know the destination.
+        events.onOpenPopup(childId, pending.profileId, pending.desktopMode)
+        return false
+    }
+
+    private data class PendingPopup(
+        val parentUrl: String?,
+        val profileId: String,
+        val desktopMode: Boolean,
+        val userGesture: Boolean,
+    )
 
     private fun handlePageMessage(tabId: String, type: String, data: JSONObject?, events: TabEvents) {
         val webView = pool.get(tabId) ?: return
