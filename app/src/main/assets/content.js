@@ -87,6 +87,35 @@
     return function (s) { return String(s || "").toLowerCase().indexOf(lower) >= 0; };
   }
 
+  function bgAlpha(bg) {
+    var m = /rgba?\(([^)]+)\)/.exec(bg || "");
+    if (!m) return 1;
+    var p = m[1].split(",");
+    return p.length > 3 ? parseFloat(p[3]) : 1;
+  }
+
+  // A modal's dim backdrop is usually a separate portal element — a fixed, viewport-covering,
+  // semi-transparent layer with no role or text — so hiding the dialog card leaves the page
+  // dimmed and click-blocked. When a procedural rule removes something, drop any such scrim too.
+  function removeModalScrims() {
+    var w = window.innerWidth, h = window.innerHeight;
+    var nodes = document.querySelectorAll("body *");
+    for (var i = 0; i < nodes.length; i++) {
+      var e = nodes[i];
+      if (e.getAttribute("data-ruta-proc") === "1") continue;
+      var cs = window.getComputedStyle(e);
+      if (cs.display === "none") continue;
+      if (cs.position !== "fixed" && cs.position !== "absolute") continue;
+      var a = bgAlpha(cs.backgroundColor);
+      if (!(a > 0.02 && a < 1)) continue; // only semi-transparent dim layers
+      var r = e.getBoundingClientRect();
+      if (r.width < w * 0.85 || r.height < h * 0.7) continue;
+      if ((e.textContent || "").trim().length >= 2) continue; // scrims carry no content
+      e.setAttribute("data-ruta-proc", "1");
+      e.style.setProperty("display", "none", "important");
+    }
+  }
+
   function sweepProcedural() {
     if (!procRules.length) return;
     var hid = false;
@@ -109,6 +138,7 @@
       }
     }
     if (hid) {
+      removeModalScrims();
       // Overlays often lock page scroll (body overflow:hidden); restore it once removed.
       var roots = [document.documentElement, document.body];
       for (var k = 0; k < roots.length; k++) {
