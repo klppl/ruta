@@ -3,13 +3,23 @@ package io.github.klppl.ruta.blocking
 import io.github.klppl.ruta.util.Hosts
 
 /**
- * A procedural element-hiding rule: hide elements matching [selector] whose text content matches
- * [text]. [text] is either a plain substring or a `/regex/flags` literal — content.js decides.
- * This is the subset of uBlock's `:has-text()` / `:contains()` we can evaluate page-side.
+ * One operator in a procedural cosmetic chain. [op] is one of: `has-text` / `contains` (keep only
+ * elements whose text matches [arg]), `upward` ([arg] = ancestor count or selector), `style`
+ * ([arg] = CSS to apply), or `remove` (delete the node). content.js evaluates these page-side.
+ */
+data class ProceduralStep(
+    val op: String,
+    val arg: String,
+)
+
+/**
+ * A procedural element rule: start from [selector], then apply [steps] in order (uBlock-style
+ * `:has-text` / `:upward` / `:style` / `:remove`). The default action is hide unless a `style`
+ * or `remove` step overrides it. This is the subset of uBlock procedural filters ruta can run.
  */
 data class ProceduralRule(
     val selector: String,
-    val text: String,
+    val steps: List<ProceduralStep>,
 )
 
 /** Immutable result of parsing element-hiding rules. */

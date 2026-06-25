@@ -68,12 +68,12 @@
   else document.addEventListener("DOMContentLoaded", startObserver);
 
   // ----------------------------------------------- procedural cosmetics ---
-  // :has-text() / :contains() element-hiding from the filter lists (parsed natively into
-  // {selector, text} pairs). CSS can't match by text, so we evaluate these page-side: hide any
-  // element matching `selector` whose textContent matches `text` (a /regex/flags literal or a
-  // plain substring). This covers e.g. the Meta "open in app" modal, which has no stable
-  // selector — matched by its CTA text so real dialogs (composers, viewers) are left alone.
-  var procRules = []; // [{ sel: string, test: fn(string)->bool }]
+  // uBlock-style procedural filters from the lists (parsed natively into {selector, steps}). CSS
+  // can't express these, so we evaluate them page-side: start from `selector`, then apply each
+  // step in order — text filters (:has-text/:contains), ancestor traversal (:upward), and a final
+  // action (hide by default, or :style / :remove). Covers e.g. the Meta "open in app" modal
+  // (matched by CTA text), Facebook Reels/Suggested collapsing, and Reddit AutoModerator removal.
+  var procRules = []; // [{ sel: string, steps: [{op, ...}] }]
 
   function compileNeedle(text) {
     var m = /^\/(.*)\/([a-z]*)$/i.exec(text || "");
@@ -116,28 +116,62 @@
     }
   }
 
+  // :upward(n) -> n-th ancestor; :upward(selector) -> nearest matching ancestor (excluding self).
+  function upwardOf(el, arg) {
+    if (/^[0-9]+$/.test(arg)) {
+      var n = parseInt(arg, 10);
+      while (n-- > 0 && el) el = el.parentElement;
+      return el;
+    }
+    if (!el.parentElement) return null;
+    try {
+      return el.parentElement.closest(arg);
+    } catch (e) {
+      return null;
+    }
+  }
+
   function sweepProcedural() {
     if (!procRules.length) return;
-    var hid = false;
+    var removed = false;
     for (var i = 0; i < procRules.length; i++) {
       var r = procRules[i];
-      var nodes;
+      var els;
       try {
-        nodes = document.querySelectorAll(r.sel);
+        els = [].slice.call(document.querySelectorAll(r.sel));
       } catch (e) {
         continue;
       }
-      for (var j = 0; j < nodes.length; j++) {
-        var el = nodes[j];
-        if (el.getAttribute("data-ruta-proc") === "1") continue;
-        if (r.test(el.textContent || "")) {
-          el.setAttribute("data-ruta-proc", "1");
+      var action = "hide";
+      var styleArg = null;
+      for (var s = 0; s < r.steps.length; s++) {
+        var step = r.steps[s];
+        if (step.op === "filter") {
+          els = filterByText(els, step.test);
+        } else if (step.op === "upward") {
+          els = mapUpward(els, step.arg);
+        } else if (step.op === "style") {
+          action = "style";
+          styleArg = step.arg;
+        } else if (step.op === "remove") {
+          action = "remove";
+        }
+      }
+      for (var e = 0; e < els.length; e++) {
+        var el = els[e];
+        if (!el || el.getAttribute("data-ruta-proc") === "1") continue;
+        el.setAttribute("data-ruta-proc", "1");
+        if (action === "style") {
+          try { el.style.cssText += ";" + styleArg; } catch (x) {}
+        } else if (action === "remove") {
+          try { el.remove(); removed = true; } catch (x) {}
+        } else {
           el.style.setProperty("display", "none", "important");
-          hid = true;
+          removed = true;
         }
       }
     }
-    if (hid) {
+    if (removed) {
       removeModalScrims();
       // Overlays often lock page scroll (body overflow:hidden); restore it once removed.
       var roots = [document.documentElement, document.body];
@@ -145,6 +179,23 @@
         if (roots[k]) roots[k].style.setProperty("overflow", "auto", "important");
       }
     }
+  }
+
+  function filterByText(els, test) {
+    var out = [];
+    for (var i = 0; i < els.length; i++) {
+      if (test(els[i].textContent || "")) out.push(els[i]);
+    }
+    return out;
+  }
+
+  function mapUpward(els, arg) {
+    var out = [];
+    for (var i = 0; i < els.length; i++) {
+      var up = upwardOf(els[i], arg);
+      if (up && out.indexOf(up) < 0) out.push(up);
+    }
+    return out;
   }
 
   var procScheduled = false;
@@ -175,9 +226,19 @@
     if (!rules || !rules.length) return;
     procRules = [];
     for (var i = 0; i < rules.length; i++) {
-      if (rules[i] && rules[i].selector) {
-        procRules.push({ sel: rules[i].selector, test: compileNeedle(rules[i].text) });
+      var rule = rules[i];
+      if (!rule || !rule.selector) continue;
+      var raw = rule.steps || [];
+      var steps = [];
+      for (var k = 0; k < raw.length; k++) {
+        var op = raw[k].op;
+        var arg = raw[k].arg || "";
+        if (op === "has-text" || op === "contains") steps.push({ op: "filter", test: compileNeedle(arg) });
+        else if (op === "upward") steps.push({ op: "upward", arg: arg });
+        else if (op === "style") steps.push({ op: "style", arg: arg });
+        else if (op === "remove") steps.push({ op: "remove" });
       }
+      procRules.push({ sel: rule.selector, steps: steps });
     }
     if (document.documentElement) startProcObserver();
     else document.addEventListener("DOMContentLoaded", startProcObserver);

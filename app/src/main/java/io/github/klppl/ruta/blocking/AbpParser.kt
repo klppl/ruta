@@ -16,12 +16,14 @@ package io.github.klppl.ruta.blocking
  */
 object AbpParser {
 
-    /** Procedural operators we evaluate page-side (text-match element hiding). */
-    private val textTokens = listOf(":has-text(", ":contains(")
+    /** Procedural operators we evaluate page-side (see content.js). */
+    private val proceduralOps = listOf("has-text", "contains", "upward", "style", "remove")
+    private val proceduralStarts = proceduralOps.map { ":$it(" }
 
     /** Procedural / scriptlet fragments we cannot evaluate — drop the whole rule. */
     private val unsupportedProceduralTokens = listOf(
-        "+js(", ":xpath(", ":style(", ":-abp-", ":matches-css", ":upward(", ":remove(",
+        "+js(", ":xpath(", ":-abp-", ":matches-css", ":matches-media", ":matches-path",
+        ":matches-attr", ":min-text-length(", ":watch-attr(", ":if(", ":if-not(",
     )
 
     class Accumulator {
@@ -124,18 +126,18 @@ object AbpParser {
             }
         }
 
-        // Procedural text-match hiding (:has-text / :contains) — evaluated page-side.
-        val textIdx = textTokens.mapNotNull { selector.indexOf(it).takeIf { i -> i >= 0 } }.minOrNull()
-        if (textIdx != null) {
+        // Anything with a procedural operator we don't implement is dropped wholesale.
+        if (unsupportedProceduralTokens.any { selector.contains(it) }) return
+
+        // Procedural chain (:has-text / :contains / :upward / :style / :remove), evaluated page-side.
+        val procStart = proceduralStarts.mapNotNull { selector.indexOf(it).takeIf { i -> i >= 0 } }.minOrNull()
+        if (procStart != null) {
             if (unhide) return // procedural unhide isn't supported
-            if (unsupportedProceduralTokens.any { selector.contains(it) }) return
-            val rule = parseProcedural(selector, textIdx) ?: return
+            val rule = parseProceduralChain(selector, procStart) ?: return
             if (positives.isEmpty()) acc.proceduralGeneric.add(rule)
             else for (d in positives) acc.proceduralDomain.getOrPut(d) { HashSet() }.add(rule)
             return
         }
-
-        if (unsupportedProceduralTokens.any { selector.contains(it) }) return
 
         if (unhide) {
             if (positives.isEmpty()) acc.genericUnhide.add(selector)
@@ -150,15 +152,40 @@ object AbpParser {
         }
     }
 
-    /** Split `base:has-text(arg)` into a [ProceduralRule]; null if malformed. */
-    private fun parseProcedural(selector: String, textIdx: Int): ProceduralRule? {
-        val open = selector.indexOf('(', textIdx)
-        val close = selector.lastIndexOf(')')
-        if (open < 0 || close <= open) return null
-        val base = selector.substring(0, textIdx).trim().ifEmpty { "*" }
-        val needle = selector.substring(open + 1, close).trim()
-        if (needle.isEmpty()) return null
-        return ProceduralRule(base, needle)
+    /**
+     * Split `base:op(arg):op(arg)…` into a base selector plus an ordered step chain. [start] is the
+     * index of the first procedural operator; everything before it is the (native-CSS) base. Returns
+     * null if the chain is malformed (unbalanced parens, an unknown operator, or stray text between
+     * operators — uBlock procedural operators must be a clean trailing chain).
+     */
+    private fun parseProceduralChain(selector: String, start: Int): ProceduralRule? {
+        val base = selector.substring(0, start).trim().ifEmpty { "*" }
+        val steps = ArrayList<ProceduralStep>()
+        var i = start
+        val n = selector.length
+        while (i < n) {
+            if (selector[i] != ':') return null
+            val open = selector.indexOf('(', i)
+            if (open < 0) return null
+            val op = selector.substring(i + 1, open).trim().lowercase()
+            if (op !in proceduralOps) return null
+            // Balanced-paren argument (text/regex args may contain nested parens).
+            var depth = 1
+            var j = open + 1
+            while (j < n && depth > 0) {
+                when (selector[j]) {
+                    '(' -> depth++
+                    ')' -> depth--
+                }
+                j++
+            }
+            if (depth != 0) return null
+            val arg = selector.substring(open + 1, j - 1).trim()
+            if ((op == "has-text" || op == "contains" || op == "upward") && arg.isEmpty()) return null
+            steps.add(ProceduralStep(op, arg))
+            i = j
+        }
+        return if (steps.isEmpty()) null else ProceduralRule(base, steps)
     }
 
     /** Extract a pure host from a `||`-anchored rule; null if the rule is path/wildcard. */

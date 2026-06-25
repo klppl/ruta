@@ -113,4 +113,6 @@ dependencies {
 
     implementation(libs.coil.compose)
     implementation(libs.reorderable)
+
+    testImplementation("junit:junit:4.13.2")
 }

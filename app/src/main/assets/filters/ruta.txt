@@ -2,14 +2,15 @@
 ! Description: Built-in filter list maintained in the ruta repo. Add network, cosmetic and
 !   procedural (:has-text) rules here for granular control without depending on a remote list.
 ! Expires: 7 days
-! Version: 1
+! Version: 2
 !
 ! Syntax: standard Adblock Plus. ruta enforces:
 !   - Network:    ||host^   and   @@||host^   (host-anchored only)   plus hostfile lines
 !   - Cosmetic:   domain##selector            (plain element hiding)
-!   - Procedural: domain##selector:has-text(/regex/flags)   (text-matched hiding, page-side)
+!   - Procedural: domain##selector + a trailing chain of :has-text()/:contains() (text filter),
+!                 :upward(n|selector) (ancestor), :style(css) and :remove() — evaluated page-side
 ! Unsupported (silently dropped): path/regex/wildcard network rules, scriptlets (#$#, +js),
-!   and procedural operators other than :has-text / :contains.
+!   and other procedural operators (:xpath, :matches-css, :min-text-length, …).
 
 ! ============================================================================
 ! App-install / "open in app" interstitials
@@ -19,3 +20,36 @@
 ! by its call-to-action text. Matching aria-modal dialogs by CTA leaves real dialogs (post
 ! composers, photo viewers, menus) untouched.
 threads.com,threads.net,instagram.com,facebook.com##[aria-modal="true"]:has-text(/öppna (threads|instagram|facebook)|hämta appen|get the app|open (in |the )?(the )?app|use the app|continue (in|with) (the )?app|see (more|this) (on|in) (the )?(app|instagram|threads|facebook)/i)
+
+! ============================================================================
+! Social-network annoyances
+! ============================================================================
+! Adapted from yokoffing's Annoyance List (https://github.com/yokoffing/filterlists),
+! itself drawn from the r/uBlockOrigin community. Trimmed to ruta's supported syntax:
+! plain `##` element hiding and `:has-text()` only. Rules that rely on :upward / :style /
+! :xpath / :remove, and ones pinned to volatile obfuscated class names, are omitted because
+! ruta can't enforce them (they'd be silently dropped) or they break when the site reshuffles.
+
+! --- X / Twitter ---
+twitter.com,x.com###layers>div:last-of-type:has-text(Switch to the app)
+twitter.com,x.com##[aria-label="Get Verified"]
+twitter.com,x.com##[aria-label="who to follow" i]
+twitter.com,x.com##[aria-label$="trending now" i]
+
+! --- Reddit ---
+www.reddit.com##header [aria-label="Advertise"]
+www.reddit.com###COIN_PURCHASE_DROPDOWN_ID
+www.reddit.com##.icon-coins
+www.reddit.com##.block > award-button
+www.reddit.com##[role="menu"] button:has-text(Online Status)
+www.reddit.com##header button:has-text(/Shop Avatars/):upward(1)
+new.reddit.com##[data-testid="comment_author_link"][href="/user/AutoModerator/"]:upward(.Comment)
+old.reddit.com##.comment .author[href="https://old.reddit.com/user/AutoModerator"]:upward(.comment)
+www.reddit.com,sh.reddit.com##[data-id="user-hover-card"] a[href="/user/AutoModerator/"]:upward(shreddit-comment)
+reddit.com##[href="/user/AutoModerator/"]:upward(shreddit-comment)
+
+! --- Facebook (collapse Reels / Suggested / discovery feed injections) ---
+www.facebook.com##:is([aria-posinset],[aria-describedby]:not([aria-posinset])):has([aria-label="Reels"]):style(height: 0 !important; overflow: hidden !important;)
+www.facebook.com##:is([aria-posinset],[aria-describedby]:not([aria-posinset])):has([aria-label="Suggested pages"]):style(height: 0 !important; overflow: hidden !important;)
+www.facebook.com##:is([aria-posinset],[aria-describedby]:not([aria-posinset])):has([href="/friends/"]):style(height: 0 !important; overflow: hidden !important;)
+www.facebook.com##:is([aria-posinset],[aria-describedby]:not([aria-posinset])):has([href="/groups/discover/"]):style(height: 0 !important; overflow: hidden !important;)

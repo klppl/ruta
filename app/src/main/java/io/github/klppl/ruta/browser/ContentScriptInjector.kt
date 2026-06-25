@@ -87,7 +87,11 @@ class ContentScriptInjector @Inject constructor(
     fun applyProcedural(webView: WebView, rules: List<ProceduralRule>) {
         if (rules.isEmpty()) return
         val arr = JSONArray()
-        rules.forEach { arr.put(JSONObject(mapOf("selector" to it.selector, "text" to it.text))) }
+        rules.forEach { rule ->
+            val steps = JSONArray()
+            rule.steps.forEach { step -> steps.put(JSONObject(mapOf("op" to step.op, "arg" to step.arg))) }
+            arr.put(JSONObject(mapOf("selector" to rule.selector, "steps" to steps)))
+        }
         webView.evaluateJavascript("window.__ruta&&window.__ruta.applyProcedural($arr)", null)
     }
 
