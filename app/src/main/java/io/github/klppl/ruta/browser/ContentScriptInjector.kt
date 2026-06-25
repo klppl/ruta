@@ -8,6 +8,7 @@ import androidx.webkit.WebMessageCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import dagger.hilt.android.qualifiers.ApplicationContext
+import io.github.klppl.ruta.blocking.ProceduralRule
 import org.json.JSONArray
 import org.json.JSONObject
 import android.content.Context
@@ -81,6 +82,13 @@ class ContentScriptInjector @Inject constructor(
         if (selectors.isEmpty()) return
         val json = JSONArray(selectors).toString()
         webView.evaluateJavascript("window.__ruta&&window.__ruta.applyCosmetic($json)", null)
+    }
+
+    fun applyProcedural(webView: WebView, rules: List<ProceduralRule>) {
+        if (rules.isEmpty()) return
+        val arr = JSONArray()
+        rules.forEach { arr.put(JSONObject(mapOf("selector" to it.selector, "text" to it.text))) }
+        webView.evaluateJavascript("window.__ruta&&window.__ruta.applyProcedural($arr)", null)
     }
 
     fun applyCustomCss(webView: WebView, css: String) {

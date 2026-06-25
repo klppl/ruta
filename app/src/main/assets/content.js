@@ -67,6 +67,93 @@
   if (document.documentElement) startObserver();
   else document.addEventListener("DOMContentLoaded", startObserver);
 
+  // ----------------------------------------------- procedural cosmetics ---
+  // :has-text() / :contains() element-hiding from the filter lists (parsed natively into
+  // {selector, text} pairs). CSS can't match by text, so we evaluate these page-side: hide any
+  // element matching `selector` whose textContent matches `text` (a /regex/flags literal or a
+  // plain substring). This covers e.g. the Meta "open in app" modal, which has no stable
+  // selector — matched by its CTA text so real dialogs (composers, viewers) are left alone.
+  var procRules = []; // [{ sel: string, test: fn(string)->bool }]
+
+  function compileNeedle(text) {
+    var m = /^\/(.*)\/([a-z]*)$/i.exec(text || "");
+    if (m) {
+      try {
+        var re = new RegExp(m[1], m[2]);
+        return function (s) { return re.test(s || ""); };
+      } catch (e) {}
+    }
+    var lower = String(text || "").toLowerCase();
+    return function (s) { return String(s || "").toLowerCase().indexOf(lower) >= 0; };
+  }
+
+  function sweepProcedural() {
+    if (!procRules.length) return;
+    var hid = false;
+    for (var i = 0; i < procRules.length; i++) {
+      var r = procRules[i];
+      var nodes;
+      try {
+        nodes = document.querySelectorAll(r.sel);
+      } catch (e) {
+        continue;
+      }
+      for (var j = 0; j < nodes.length; j++) {
+        var el = nodes[j];
+        if (el.getAttribute("data-ruta-proc") === "1") continue;
+        if (r.test(el.textContent || "")) {
+          el.setAttribute("data-ruta-proc", "1");
+          el.style.setProperty("display", "none", "important");
+          hid = true;
+        }
+      }
+    }
+    if (hid) {
+      // Overlays often lock page scroll (body overflow:hidden); restore it once removed.
+      var roots = [document.documentElement, document.body];
+      for (var k = 0; k < roots.length; k++) {
+        if (roots[k]) roots[k].style.setProperty("overflow", "auto", "important");
+      }
+    }
+  }
+
+  var procScheduled = false;
+  function scheduleProcSweep() {
+    if (procScheduled) return;
+    procScheduled = true;
+    var run = function () {
+      procScheduled = false;
+      try {
+        sweepProcedural();
+      } catch (e) {}
+    };
+    if (window.requestAnimationFrame) window.requestAnimationFrame(run);
+    else window.setTimeout(run, 0);
+  }
+
+  var procObserverStarted = false;
+  function startProcObserver() {
+    if (procObserverStarted) return;
+    procObserverStarted = true;
+    var obs = new MutationObserver(scheduleProcSweep);
+    try {
+      obs.observe(document.documentElement, { childList: true, subtree: true });
+    } catch (e) {}
+  }
+
+  function applyProcedural(rules) {
+    if (!rules || !rules.length) return;
+    procRules = [];
+    for (var i = 0; i < rules.length; i++) {
+      if (rules[i] && rules[i].selector) {
+        procRules.push({ sel: rules[i].selector, test: compileNeedle(rules[i].text) });
+      }
+    }
+    if (document.documentElement) startProcObserver();
+    else document.addEventListener("DOMContentLoaded", startProcObserver);
+    scheduleProcSweep();
+  }
+
   // ------------------------------------------------------------- clipboard ---
   var TRACK_PARAMS = /^(utm_|_branch)|^(fbclid|gclid|igsh|igshid|xmt|si|mc_eid|mc_cid|ref_src|ref_url|s|t|rdt|correlation_id|share_id)$/i;
   function cleanUrl(u) {
@@ -350,6 +437,7 @@
   window.__ruta = {
     version: 1,
     applyCosmetic: applyCosmetic,
+    applyProcedural: applyProcedural,
     applyCustomCss: applyCustomCss,
     resolveMedia: resolveMedia,
     probeElement: probeElement,

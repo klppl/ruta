@@ -14,7 +14,10 @@ import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** A single ABP/hostfile filter list the user can enable/disable. */
+/**
+ * A single ABP/hostfile filter list the user can enable/disable. When [asset] is set the list
+ * ships inside the app (read from `assets/`) instead of being downloaded from [url].
+ */
 @Serializable
 data class FilterListEntry(
     val id: String,
@@ -22,6 +25,7 @@ data class FilterListEntry(
     val url: String,
     val enabled: Boolean = true,
     val builtIn: Boolean = false,
+    val asset: String? = null,
 )
 
 /**
@@ -81,6 +85,14 @@ class FilterListRepository @Inject constructor(
 
     companion object {
         val DEFAULTS = listOf(
+            FilterListEntry(
+                id = "ruta",
+                name = "ruta filters",
+                url = "",
+                enabled = true,
+                builtIn = true,
+                asset = "filters/ruta.txt",
+            ),
             FilterListEntry("easylist", "EasyList", "https://easylist.to/easylist/easylist.txt", true, true),
             FilterListEntry("easyprivacy", "EasyPrivacy", "https://easylist.to/easylist/easyprivacy.txt", true, true),
         )

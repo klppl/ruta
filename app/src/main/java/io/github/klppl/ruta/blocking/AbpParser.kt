@@ -8,16 +8,20 @@ package io.github.klppl.ruta.blocking
  *    `0.0.0.0 host` / `127.0.0.1 host` hostfile entries. Path/regex/wildcard network
  *    rules are dropped (they can't be matched allocation-free in shouldInterceptRequest).
  *  - Cosmetic: `##` (hide) and `#@#` (unhide) element-hiding rules with their optional
- *    `domain.com##selector` restriction. Procedural / scriptlet rules are dropped.
+ *    `domain.com##selector` restriction.
+ *  - Procedural: `:has-text()` / `:contains()` element-hiding (in a `##` or `#?#` rule), which
+ *    content.js evaluates page-side. Other procedural operators and scriptlets are dropped.
  *
  * Parse multiple lists into one [Accumulator], then [Accumulator.build].
  */
 object AbpParser {
 
-    /** Selector fragments we cannot evaluate with plain CSS — drop the whole rule. */
-    private val proceduralTokens = listOf(
-        ":has-text(", "+js(", ":xpath(", ":style(", ":-abp-",
-        ":matches-css", ":upward(", ":remove(", ":contains(",
+    /** Procedural operators we evaluate page-side (text-match element hiding). */
+    private val textTokens = listOf(":has-text(", ":contains(")
+
+    /** Procedural / scriptlet fragments we cannot evaluate — drop the whole rule. */
+    private val unsupportedProceduralTokens = listOf(
+        "+js(", ":xpath(", ":style(", ":-abp-", ":matches-css", ":upward(", ":remove(",
     )
 
     class Accumulator {
@@ -27,6 +31,8 @@ object AbpParser {
         val genericUnhide = HashSet<String>()
         val domainHide = HashMap<String, MutableSet<String>>()
         val domainUnhide = HashMap<String, MutableSet<String>>()
+        val proceduralGeneric = HashSet<ProceduralRule>()
+        val proceduralDomain = HashMap<String, MutableSet<ProceduralRule>>()
 
         fun build(): ParseResult = ParseResult(
             network = NetworkRules(blocked, allowed),
@@ -35,6 +41,8 @@ object AbpParser {
                 genericUnhide = genericUnhide,
                 domainHide = domainHide.mapValues { it.value },
                 domainUnhide = domainUnhide.mapValues { it.value },
+                proceduralGeneric = proceduralGeneric,
+                proceduralDomain = proceduralDomain.mapValues { it.value },
             ),
         )
     }
@@ -73,11 +81,14 @@ object AbpParser {
             return
         }
 
-        // Cosmetic rules.
+        // Cosmetic / procedural rules.
         line.indexOf("#@#").let { idx ->
             if (idx >= 0) { parseCosmetic(line, idx, 3, unhide = true, acc); return }
         }
-        if (line.contains("#?#") || line.contains("#$#") || line.contains("#%#")) return // procedural/snippet
+        if (line.contains("#$#") || line.contains("#%#")) return // scriptlet/snippet — unsupported
+        line.indexOf("#?#").let { idx -> // procedural cosmetic (uBlock)
+            if (idx >= 0) { parseCosmetic(line, idx, 3, unhide = false, acc); return }
+        }
         line.indexOf("##").let { idx ->
             if (idx >= 0) { parseCosmetic(line, idx, 2, unhide = false, acc); return }
         }
@@ -100,8 +111,8 @@ object AbpParser {
     ) {
         val selector = line.substring(sepIndex + sepLen).trim()
         if (selector.isEmpty()) return
-        if (proceduralTokens.any { selector.contains(it) }) return
 
+        // Domain restrictions (shared by plain and procedural rules).
         val domainsPart = line.substring(0, sepIndex)
         val positives = ArrayList<String>()
         val negatives = ArrayList<String>()
@@ -112,6 +123,19 @@ object AbpParser {
                 if (d.startsWith("~")) negatives.add(d.substring(1)) else positives.add(d)
             }
         }
+
+        // Procedural text-match hiding (:has-text / :contains) — evaluated page-side.
+        val textIdx = textTokens.mapNotNull { selector.indexOf(it).takeIf { i -> i >= 0 } }.minOrNull()
+        if (textIdx != null) {
+            if (unhide) return // procedural unhide isn't supported
+            if (unsupportedProceduralTokens.any { selector.contains(it) }) return
+            val rule = parseProcedural(selector, textIdx) ?: return
+            if (positives.isEmpty()) acc.proceduralGeneric.add(rule)
+            else for (d in positives) acc.proceduralDomain.getOrPut(d) { HashSet() }.add(rule)
+            return
+        }
+
+        if (unsupportedProceduralTokens.any { selector.contains(it) }) return
 
         if (unhide) {
             if (positives.isEmpty()) acc.genericUnhide.add(selector)
@@ -124,6 +148,17 @@ object AbpParser {
                 for (d in positives) acc.domainHide.getOrPut(d) { HashSet() }.add(selector)
             }
         }
+    }
+
+    /** Split `base:has-text(arg)` into a [ProceduralRule]; null if malformed. */
+    private fun parseProcedural(selector: String, textIdx: Int): ProceduralRule? {
+        val open = selector.indexOf('(', textIdx)
+        val close = selector.lastIndexOf(')')
+        if (open < 0 || close <= open) return null
+        val base = selector.substring(0, textIdx).trim().ifEmpty { "*" }
+        val needle = selector.substring(open + 1, close).trim()
+        if (needle.isEmpty()) return null
+        return ProceduralRule(base, needle)
     }
 
     /** Extract a pure host from a `||`-anchored rule; null if the rule is path/wildcard. */

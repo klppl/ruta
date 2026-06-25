@@ -32,9 +32,9 @@ import javax.inject.Singleton
 /**
  * Downloads, caches and parses the enabled filter lists (built-in plus user-added, configured
  * via [FilterListRepository]), then publishes the resulting [RequestBlocker] rules and
- * [CosmeticRules]. Lists are fetched at runtime (never bundled), cached to the app files dir
- * with conditional requests, re-parsed whenever the list config changes, and refreshed
- * periodically via [BlocklistRefreshWorker].
+ * [CosmeticRules]. Remote lists are fetched at runtime, cached to the app files dir with
+ * conditional requests, re-parsed whenever the list config changes, and refreshed periodically
+ * via [BlocklistRefreshWorker]. Bundled lists (FilterListEntry.asset) are read from app assets.
  */
 @Singleton
 class BlocklistRepository @Inject constructor(
@@ -83,7 +83,8 @@ class BlocklistRepository @Inject constructor(
         var error: String? = null
         try {
             for (entry in enabled) {
-                if (!listFile(entry.id).exists()) downloadOne(entry)
+                // Bundled lists are re-read every reconcile so app updates pick up rule changes.
+                if (entry.asset != null || !listFile(entry.id).exists()) downloadOne(entry)
             }
         } catch (t: Throwable) {
             error = t.message ?: "download failed"
@@ -125,6 +126,20 @@ class BlocklistRepository @Inject constructor(
 
     /** Returns true if the cached content was replaced (200), false on 304/no-op. */
     private fun downloadOne(entry: FilterListEntry): Boolean {
+        entry.asset?.let { assetPath ->
+            val body = context.assets.open(assetPath).bufferedReader().use { it.readText() }
+            listFile(entry.id).writeText(body)
+            writeMeta(
+                entry.id,
+                ListMeta(
+                    etag = null,
+                    lastModified = null,
+                    fetchedAtMillis = System.currentTimeMillis(),
+                    expiresHours = parseExpiresHours(body),
+                ),
+            )
+            return true
+        }
         val prev = readMeta(entry.id)
         val builder = Request.Builder().url(entry.url).header("Accept", "text/plain")
         prev?.etag?.let { builder.header("If-None-Match", it) }

@@ -1,0 +1,21 @@
+! Title: ruta filters
+! Description: Built-in filter list maintained in the ruta repo. Add network, cosmetic and
+!   procedural (:has-text) rules here for granular control without depending on a remote list.
+! Expires: 7 days
+! Version: 1
+!
+! Syntax: standard Adblock Plus. ruta enforces:
+!   - Network:    ||host^   and   @@||host^   (host-anchored only)   plus hostfile lines
+!   - Cosmetic:   domain##selector            (plain element hiding)
+!   - Procedural: domain##selector:has-text(/regex/flags)   (text-matched hiding, page-side)
+! Unsupported (silently dropped): path/regex/wildcard network rules, scriptlets (#$#, +js),
+!   and procedural operators other than :has-text / :contains.
+
+! ============================================================================
+! App-install / "open in app" interstitials
+! ============================================================================
+! Meta sites throw up a modal nagging you to open or install the native app. The modal uses
+! obfuscated atomic class names and carries no stable id, so it can only be targeted reliably
+! by its call-to-action text. Matching aria-modal dialogs by CTA leaves real dialogs (post
+! composers, photo viewers, menus) untouched.
+threads.com,threads.net,instagram.com,facebook.com##[aria-modal="true"]:has-text(/öppna (threads|instagram|facebook)|hämta appen|get the app|open (in |the )?(the )?app|use the app|continue (in|with) (the )?app|see (more|this) (on|in) (the )?(app|instagram|threads|facebook)/i)

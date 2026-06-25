@@ -362,8 +362,9 @@ class BrowserEngine @Inject constructor(
 
     private fun pushCosmetic(webView: WebView, host: String) {
         if (host.isEmpty() || !currentSettings.cosmeticFilteringEnabled) return
-        val selectors = blocklistRepository.cosmetic.value.selectorsFor(host)
-        contentScriptInjector.applyCosmetic(webView, selectors)
+        val rules = blocklistRepository.cosmetic.value
+        contentScriptInjector.applyCosmetic(webView, rules.selectorsFor(host))
+        contentScriptInjector.applyProcedural(webView, rules.proceduralFor(host))
     }
 
     private fun pushCustomCss(webView: WebView) {
