@@ -34,6 +34,9 @@ Works on Android 8.0+ (no Google services required).
 
 ## License
 
-Open source under the [Apache License 2.0](LICENSE). Ad/tracker blocking uses the community
-EasyList and EasyPrivacy lists (GPLv3 / CC BY-SA), downloaded at runtime — full attribution is in
-the app's About screen.
+ruta is free software under the **GNU General Public License v3.0 or later**
+([GPL-3.0-or-later](LICENSE)) — copyright © 2026 the ruta authors. You're free to use, study,
+share and modify it; distributed derivatives must stay open under the same license.
+
+Ad/tracker blocking uses the community EasyList and EasyPrivacy lists (GPLv3 / CC BY-SA),
+downloaded at runtime — full attribution is in the app's About screen.
