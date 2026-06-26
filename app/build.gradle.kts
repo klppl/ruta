@@ -11,12 +11,6 @@ android {
     namespace = "io.github.klppl.ruta"
     compileSdk = 35
 
-    // When an NDK is available (CI exports RUTA_NDK_VERSION = the runner's preinstalled NDK), AGP
-    // uses it to strip the bundled native libs and extract their debug symbols (see
-    // debugSymbolLevel = "FULL" below) so Play can symbolicate native crashes/ANRs. Unset locally —
-    // the build still succeeds without symbols, just with a "couldn't strip" warning.
-    System.getenv("RUTA_NDK_VERSION")?.takeIf { it.isNotBlank() }?.let { ndkVersion = it }
-
     defaultConfig {
         applicationId = "io.github.klppl.ruta"
         minSdk = 26
