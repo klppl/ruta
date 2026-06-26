@@ -10,6 +10,8 @@ import android.view.ContextThemeWrapper
 import android.os.Handler
 import android.os.Looper
 import android.os.Message
+import android.os.SystemClock
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.CookieManager
@@ -238,23 +240,64 @@ class BrowserEngine @Inject constructor(
             false
         }
         webView.setOnLongClickListener {
-            // Richer probe (catches <video>); posts a "context" message handled below.
-            contentScriptInjector.probe(webView, lastX, lastY)
             val hit = webView.hitTestResult
             val extra = hit.extra
             when (hit.type) {
                 WebView.HitTestResult.IMAGE_TYPE,
                 WebView.HitTestResult.SRC_IMAGE_ANCHOR_TYPE -> {
+                    // Richer probe (catches <video>); posts a "context" message handled below.
+                    contentScriptInjector.probe(webView, lastX, lastY)
                     events.onContextTarget(ContextTarget(tab.id, image = extra))
                     true
                 }
                 WebView.HitTestResult.SRC_ANCHOR_TYPE -> {
+                    contentScriptInjector.probe(webView, lastX, lastY)
                     events.onContextTarget(ContextTarget(tab.id, link = extra))
                     true
                 }
-                else -> false
+                else -> {
+                    // Not on a plain image/link. On sites where double-tap means "like" (Instagram,
+                    // TikTok), translate the long-press into a synthetic double-tap so the user can
+                    // heart posts/messages. Everywhere else, fall back to the context probe.
+                    val domain = Hosts.registrable(Hosts.hostOf(webView.url))
+                    if (domain != null && domain in LIKE_GESTURE_HOSTS) {
+                        synthesizeDoubleTap(webView, lastX, lastY)
+                        true
+                    } else {
+                        contentScriptInjector.probe(webView, lastX, lastY)
+                        false
+                    }
+                }
             }
         }
+    }
+
+    /**
+     * Dispatches a synthetic double-tap at ([x], [y]) — the native "like"/heart gesture on
+     * Instagram and similar apps. Two quick tap (down/up) pairs are fed straight to the WebView's
+     * touch pipeline so the page sees real touch events. Coordinates are the WebView's own touch
+     * space (captured in [attachLongPress]), so they land exactly where the user pressed.
+     */
+    private fun synthesizeDoubleTap(webView: WebView, x: Float, y: Float) {
+        dispatchTap(webView, x, y, delay = 0)
+        dispatchTap(webView, x, y, delay = 160)
+    }
+
+    private fun dispatchTap(webView: WebView, x: Float, y: Float, delay: Long) {
+        main.postDelayed({
+            val t = SystemClock.uptimeMillis()
+            MotionEvent.obtain(t, t, MotionEvent.ACTION_DOWN, x, y, 0).let {
+                webView.dispatchTouchEvent(it)
+                it.recycle()
+            }
+            main.postDelayed({
+                val up = SystemClock.uptimeMillis()
+                MotionEvent.obtain(t, up, MotionEvent.ACTION_UP, x, y, 0).let {
+                    webView.dispatchTouchEvent(it)
+                    it.recycle()
+                }
+            }, 40)
+        }, delay)
     }
 
     /**
@@ -399,8 +442,15 @@ class BrowserEngine @Inject constructor(
         userGesture: Boolean,
     ): Boolean {
         if (!currentSettings.openLinksExternally || !isMainFrame || !userGesture) return false
-        val currentDomain = Hosts.registrable(Hosts.hostOf(currentUrl)) ?: return false
         val targetHost = target.host?.lowercase() ?: return false
+        // Outbound-link shims (l.instagram.com, l.facebook.com, out.reddit.com, …) are same-domain
+        // redirectors that bounce the user to an external site. They'd pass the same-domain check
+        // below and load in-app, so the real destination never leaves the app. Hand the shim URL
+        // straight to the system browser and let it follow the redirect.
+        if (REDIRECT_SHIMS.any { targetHost == it || targetHost.endsWith(".$it") }) {
+            return openInExternalBrowser(target)
+        }
+        val currentDomain = Hosts.registrable(Hosts.hostOf(currentUrl)) ?: return false
         val targetDomain = Hosts.registrable(targetHost) ?: return false
         if (targetDomain == currentDomain) return false
         if (KEEP_IN_APP.any { targetHost == it || targetHost.endsWith(".$it") }) return false
@@ -481,5 +531,19 @@ class BrowserEngine @Inject constructor(
             "google.com", "apple.com", "facebook.com", "microsoft.com", "microsoftonline.com",
             "live.com", "okta.com", "auth0.com", "twitter.com", "x.com",
         )
+
+        // Same-domain outbound redirectors social apps wrap external links in. Tapping such a
+        // link otherwise stays in-app (same registrable domain) and the redirect lands inside ruta.
+        val REDIRECT_SHIMS = listOf(
+            "l.instagram.com",
+            "l.facebook.com", "lm.facebook.com",
+            "out.reddit.com",
+            "l.threads.net", "l.threads.com",
+            "t.umblr.com",
+        )
+
+        // Sites where a long-press should act as a double-tap ("like"/heart) instead of opening
+        // the image/link context menu. Registrable domains.
+        val LIKE_GESTURE_HOSTS = setOf("instagram.com", "tiktok.com")
     }
 }
