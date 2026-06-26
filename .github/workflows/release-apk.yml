@@ -13,6 +13,11 @@ name: Build release APK
 
 on:
   workflow_dispatch:
+    inputs:
+      version_code:
+        description: "Play versionCode (integer). Must be higher than the highest code already uploaded to Play. Leave blank to use the workflow run number."
+        required: false
+        type: string
 
 permissions:
   contents: write   # needed to publish a GitHub Release
@@ -31,8 +36,9 @@ jobs:
       RUTA_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
       RUTA_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
       RUTA_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-      # Monotonic versionCode for Play (must strictly increase across uploads).
-      RUTA_VERSION_CODE: ${{ github.run_number }}
+      # Monotonic versionCode for Play (must strictly increase across uploads). Defaults to the
+      # run number; override via the version_code input when Play already has a higher code.
+      RUTA_VERSION_CODE: ${{ inputs.version_code || github.run_number }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -77,7 +83,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="build-${{ github.run_number }}"
-          gh release create "$TAG" app/build/outputs/apk/release/*.apk \
-            --title "ruta build ${{ github.run_number }}" \
-            --notes "Automated release build from commit ${{ github.sha }}." \
+          gh release create "$TAG" \
+            app/build/outputs/apk/release/*.apk \
+            app/build/outputs/bundle/release/*.aab \
+            --title "ruta build ${{ github.run_number }} (versionCode ${RUTA_VERSION_CODE})" \
+            --notes "Automated release build from commit ${{ github.sha }}. versionCode ${RUTA_VERSION_CODE}. The .aab is for Play upload; the .apk is for sideloading." \
             --target "${{ github.sha }}"
