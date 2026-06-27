@@ -37,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.klppl.ruta.profile.Profile
 import io.github.klppl.ruta.ui.theme.ThemeMode
@@ -53,7 +54,14 @@ fun SettingsScreen(
     val status by viewModel.blocklistStatus.collectAsStateWithLifecycle()
     val profiles by viewModel.profiles.collectAsStateWithLifecycle()
     val filterLists by viewModel.filterLists.collectAsStateWithLifecycle()
+    val linkHandlers by viewModel.linkHandlers.collectAsStateWithLifecycle()
     var showAddFilterList by remember { mutableStateOf(false) }
+
+    // Re-read handler state when returning from the system "open by default" screen.
+    LifecycleResumeEffect(Unit) {
+        viewModel.refreshLinkHandling()
+        onPauseOrDispose { }
+    }
 
     if (showAddFilterList) {
         AddFilterListDialog(
@@ -192,6 +200,30 @@ fun SettingsScreen(
             SettingSwitch("Open external links in your browser", settings.openLinksExternally, viewModel::setOpenLinksExternally)
             SettingSwitch("Separate profile per site", settings.separateProfilePerSite, viewModel::setPerSiteProfile)
             SettingSwitch("Double-tap back to exit", settings.doubleBackToExit, viewModel::setDoubleBack)
+
+            Section("Open links in ruta")
+            Text(
+                "Pick which sites ruta offers to open when you tap their links in other apps. " +
+                    "Disabling one removes it from Android's \"supported web addresses\" list.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            viewModel.linkServices.forEach { service ->
+                SettingSwitch(
+                    title = service.name,
+                    checked = linkHandlers[service.id] != false,
+                    onCheckedChange = { viewModel.setLinkHandling(service.id, it) },
+                )
+            }
+            TextButton(onClick = { viewModel.openLinkSystemSettings() }) {
+                Text("Open Android link settings")
+            }
+            Text(
+                "Android still asks you to allow ruta to open these links the first time — use the " +
+                    "button above, then turn on \"Open supported links\".",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
 
             Section("Profiles")
             if (!viewModel.multiProfileSupported) {
