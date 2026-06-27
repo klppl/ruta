@@ -11,6 +11,7 @@ import android.webkit.WebChromeClient
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.mutableStateOf
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
@@ -26,6 +27,9 @@ class MainActivity : ComponentActivity() {
 
     private var pendingFileCallback: ValueCallback<Array<Uri>>? = null
     private var pendingPermission: PermissionRequest? = null
+
+    // URL from an external ACTION_VIEW intent, consumed once by the composition then cleared.
+    private val externalUrl = mutableStateOf<String?>(null)
 
     private val fileChooserLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -55,15 +59,27 @@ class MainActivity : ComponentActivity() {
         engine.attachActivity(this)
         wireEngineHandlers()
 
-        val initialUrl = intent?.takeIf { it.action == Intent.ACTION_VIEW }?.dataString
+        externalUrl.value = viewUrlOf(intent)
 
         setContent {
             RootScreen(
-                initialUrl = initialUrl,
+                externalUrl = externalUrl.value,
+                onExternalUrlHandled = { externalUrl.value = null },
                 onExit = { moveTaskToBack(true) },
             )
         }
     }
+
+    // launchMode is singleTask, so links tapped while ruta is already running arrive here, not in
+    // onCreate. Feed them into the same consumable state the composition observes.
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        viewUrlOf(intent)?.let { externalUrl.value = it }
+    }
+
+    private fun viewUrlOf(intent: Intent?): String? =
+        intent?.takeIf { it.action == Intent.ACTION_VIEW }?.dataString?.takeIf { it.isNotBlank() }
 
     override fun onDestroy() {
         // Don't leak this Activity into the singleton engine after teardown.

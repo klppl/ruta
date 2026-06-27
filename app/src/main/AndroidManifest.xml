@@ -46,13 +46,46 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- Open links from other apps -->
+            <!--
+              Open links to the wrapped social sites from other apps. Hosts are listed explicitly
+              (rather than a host-less browser filter) so each domain shows up under Android's
+              "Open by default → supported web addresses" screen, where the user can let ruta
+              handle them. autoVerify stays off: these are third-party domains we can't host an
+              assetlinks.json on, so verification can't succeed — the user opts in manually.
+            -->
             <intent-filter android:autoVerify="false">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" />
                 <data android:scheme="http" />
+                <data android:host="x.com" />
+                <data android:host="*.x.com" />
+                <data android:host="twitter.com" />
+                <data android:host="*.twitter.com" />
+                <data android:host="instagram.com" />
+                <data android:host="*.instagram.com" />
+                <data android:host="facebook.com" />
+                <data android:host="*.facebook.com" />
+                <data android:host="fb.com" />
+                <data android:host="*.fb.com" />
+                <data android:host="tiktok.com" />
+                <data android:host="*.tiktok.com" />
+                <data android:host="reddit.com" />
+                <data android:host="*.reddit.com" />
+                <data android:host="redd.it" />
+                <data android:host="bsky.app" />
+                <data android:host="*.bsky.app" />
+                <data android:host="threads.net" />
+                <data android:host="*.threads.net" />
+                <data android:host="threads.com" />
+                <data android:host="*.threads.com" />
+                <data android:host="linkedin.com" />
+                <data android:host="*.linkedin.com" />
+                <data android:host="tumblr.com" />
+                <data android:host="*.tumblr.com" />
+                <data android:host="mastodon.social" />
+                <data android:host="*.mastodon.social" />
             </intent-filter>
         </activity>
 

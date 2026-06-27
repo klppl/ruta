@@ -183,6 +183,51 @@ class BrowserViewModel @Inject constructor(
         loadInActiveTab(url)
     }
 
+    /**
+     * Open a link handed to us from outside the app (an `ACTION_VIEW` intent). Unlike [openInput],
+     * which loads into the current tab, this routes the URL into the matching service's profile so
+     * tapping an x.com link elsewhere lands in the X "instance" — reusing an existing tab on that
+     * profile when one is already open.
+     */
+    fun openExternalLink(raw: String) {
+        val url = toUrlOrSearch(raw)
+        if (url.isBlank()) return
+        val service = Services.forHost(Hosts.hostOf(url))
+        val profileId = if (settings.value.separateProfilePerSite && service != null) {
+            Profile.siteId(service.host)
+        } else {
+            _selectedProfileId.value
+        }
+        _dockVisible.value = true
+        _showTabSwitcher.value = false
+
+        val reusable = _tabs.value.firstOrNull {
+            it.profileId == profileId &&
+                service != null && Services.forHost(Hosts.hostOf(it.url))?.host == service.host
+        }
+        val active = activeTab.value
+        when {
+            reusable != null -> {
+                _activeId.value = reusable.id
+                _tabs.value = _tabs.value.map {
+                    if (it.id == reusable.id) it.copy(url = url, isNewTab = false) else it
+                }
+                engine.loadUrl(reusable.id, url)
+            }
+            active != null && active.isNewTab -> {
+                _tabs.value = _tabs.value.map {
+                    if (it.id == active.id) it.copy(url = url, profileId = profileId, isNewTab = false) else it
+                }
+                engine.loadUrl(active.id, url)
+            }
+            else -> {
+                val tab = Tab(id = newId(), url = url, profileId = profileId, isNewTab = false)
+                _tabs.value = _tabs.value + tab
+                _activeId.value = tab.id
+            }
+        }
+    }
+
     fun openService(service: AppService) {
         val profileId = if (settings.value.separateProfilePerSite) {
             Profile.siteId(service.host)

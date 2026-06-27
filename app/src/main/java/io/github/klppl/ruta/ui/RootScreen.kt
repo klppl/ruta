@@ -21,15 +21,19 @@ import io.github.klppl.ruta.ui.theme.accentForProfile
 
 @Composable
 fun RootScreen(
-    initialUrl: String?,
+    externalUrl: String?,
+    onExternalUrlHandled: () -> Unit,
     onExit: () -> Unit,
 ) {
     val browserViewModel: BrowserViewModel = hiltViewModel()
     val settings by browserViewModel.settings.collectAsStateWithLifecycle()
     val activeTab by browserViewModel.activeTab.collectAsStateWithLifecycle()
 
-    LaunchedEffect(initialUrl) {
-        if (!initialUrl.isNullOrBlank()) browserViewModel.openInput(initialUrl)
+    LaunchedEffect(externalUrl) {
+        if (!externalUrl.isNullOrBlank()) {
+            browserViewModel.openExternalLink(externalUrl)
+            onExternalUrlHandled()
+        }
     }
 
     RutaTheme(
