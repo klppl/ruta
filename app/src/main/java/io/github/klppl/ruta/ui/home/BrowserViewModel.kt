@@ -169,6 +169,12 @@ class BrowserViewModel @Inject constructor(
             engine.goBack(id)
             return true
         }
+        // History exhausted. An added (dock) site is sticky: never close it on back.
+        // Let the host background the app instead (moveTaskToBack keeps the tab + WebView
+        // alive), so the site is still there next launch. Blank launcher tabs close as before.
+        if (_tabs.value.firstOrNull { it.id == id }?.isNewTab == false) {
+            return false
+        }
         if (_tabs.value.size > 1) {
             closeTab(id)
             return true
