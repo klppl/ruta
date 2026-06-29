@@ -11,13 +11,17 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.AlertDialog
@@ -125,8 +129,16 @@ fun HomeScreen(
             }
 
             // Opaque bottom bar: collapsible dock + menu, plus the optional bottom address bar.
+            // Pad by the larger of the navigation-bar and IME insets: normally it clears the nav
+            // bar, but when the keyboard opens the bar grows to sit just above it. Since the
+            // WebView lives in the weight(1f) slot above, it shrinks to match — so a focused page
+            // input ends up above the keyboard (edge-to-edge neutralizes manifest adjustResize).
             Surface(color = MaterialTheme.colorScheme.surfaceContainer, tonalElevation = 3.dp) {
-                Column(modifier = Modifier.fillMaxWidth().navigationBarsPadding()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .windowInsetsPadding(WindowInsets.navigationBars.union(WindowInsets.ime)),
+                ) {
                     if (!settings.showAddressBar) {
                         LoadingLine(progress = current?.progress ?: 0, accent = accent)
                     }
