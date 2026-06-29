@@ -47,6 +47,17 @@ new.reddit.com##[data-testid="comment_author_link"][href="/user/AutoModerator/"]
 old.reddit.com##.comment .author[href="https://old.reddit.com/user/AutoModerator"]:upward(.comment)
 www.reddit.com,sh.reddit.com##[data-id="user-hover-card"] a[href="/user/AutoModerator/"]:upward(shreddit-comment)
 reddit.com##[href="/user/AutoModerator/"]:upward(shreddit-comment)
+! "View in the Reddit app / Open" promos: bottom bar, smartbanner, interstitials and the
+! body scroll-lock they impose.
+reddit.com##body.noscroll:style(overflow: auto !important; position: static !important;)
+reddit.com##xpromo-amp-smartbanner
+reddit.com##xpromo-inline
+reddit.com##xpromo-popup
+reddit.com##.AppSelectorModal
+reddit.com##div[class*="XPromo"]
+reddit.com##shreddit-async-loader[bundlename="xpromo-popup"]
+reddit.com##.XPromoPopup
+reddit.com##bottom-sheet-v2
 
 ! --- Facebook (collapse Reels / Suggested / discovery feed injections) ---
 www.facebook.com##:is([aria-posinset],[aria-describedby]:not([aria-posinset])):has([aria-label="Reels"]):style(height: 0 !important; overflow: hidden !important;)
