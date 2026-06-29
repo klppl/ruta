@@ -59,7 +59,6 @@ class BookmarkRepository @Inject constructor(
         host = host,
         brandColor = accentForProfile(host),
         monogram = name.take(1).uppercase(),
-        faviconUrl = "https://icons.duckduckgo.com/ip3/$host.ico",
         isCustom = true,
     )
 

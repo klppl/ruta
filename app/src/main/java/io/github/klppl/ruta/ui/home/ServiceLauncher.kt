@@ -32,15 +32,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImagePainter
-import coil.compose.SubcomposeAsyncImage
-import coil.compose.SubcomposeAsyncImageContent
+import io.github.klppl.ruta.ui.components.SiteFavicon
 import io.github.klppl.ruta.model.AppService
 import io.github.klppl.ruta.model.Services
 import io.github.klppl.ruta.profile.Profile
@@ -140,9 +137,6 @@ private fun ServiceTile(service: AppService, onClick: () -> Unit, onLongClick: (
             contentAlignment = Alignment.Center,
         ) {
             val iconRes = brandIconRes(service.id)
-            // No bundled glyph (Play flavor, or a custom site) -> use the site's own favicon.
-            val faviconUrl = service.faviconUrl
-                ?: if (iconRes == null) "https://icons.duckduckgo.com/ip3/${service.host}.ico" else null
             when {
                 iconRes != null -> Icon(
                     painter = painterResource(iconRes),
@@ -150,7 +144,14 @@ private fun ServiceTile(service: AppService, onClick: () -> Unit, onLongClick: (
                     tint = onColor,
                     modifier = Modifier.size(34.dp),
                 )
-                faviconUrl != null -> Favicon(faviconUrl, service.name, service.monogram, onColor)
+                // No bundled glyph (Play flavor, or a custom site) -> the site's own icon,
+                // centered and letterboxed rather than stretched across the whole tile.
+                service.host.isNotBlank() -> SiteFavicon(
+                    host = service.host,
+                    contentDescription = service.name,
+                    modifier = Modifier.fillMaxSize().padding(18.dp),
+                    fallback = { Monogram(service.monogram, onColor) },
+                )
                 else -> Monogram(service.monogram, onColor)
             }
         }
@@ -161,24 +162,6 @@ private fun ServiceTile(service: AppService, onClick: () -> Unit, onLongClick: (
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(top = 8.dp),
         )
-    }
-}
-
-@Composable
-private fun Favicon(url: String, name: String, monogram: String, fallbackColor: Color) {
-    SubcomposeAsyncImage(
-        model = url,
-        contentDescription = name,
-        contentScale = ContentScale.Crop,
-        modifier = Modifier.fillMaxSize(),
-    ) {
-        if (painter.state is AsyncImagePainter.State.Success) {
-            SubcomposeAsyncImageContent()
-        } else {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Monogram(monogram, fallbackColor)
-            }
-        }
     }
 }
 

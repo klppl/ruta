@@ -14,8 +14,6 @@ data class AppService(
     val brandColor: Color,
     /** Single-letter monogram used by the launcher tile when no icon font is bundled. */
     val monogram: String = name.take(1),
-    /** Remote favicon used for user-added custom sites (null for built-ins, which use bundled glyphs). */
-    val faviconUrl: String? = null,
     /** True for user-added bookmarks (rendered with a favicon and removable). */
     val isCustom: Boolean = false,
 )

@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -32,12 +33,9 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImagePainter
-import coil.compose.SubcomposeAsyncImage
-import coil.compose.SubcomposeAsyncImageContent
+import io.github.klppl.ruta.ui.components.SiteFavicon
 import io.github.klppl.ruta.model.Services
 import io.github.klppl.ruta.model.Tab
 import io.github.klppl.ruta.ui.theme.accentForProfile
@@ -122,8 +120,8 @@ private fun DockItem(
     val service = Services.forHost(host)
     val accent = accentForProfile(tab.profileId)
     val iconRes = service?.let { brandIconRes(it.id) }
-    // No bundled glyph (Play flavor, or a non-built-in site) -> the site's own favicon.
-    val faviconUrl = if (iconRes == null && host != null) "https://icons.duckduckgo.com/ip3/$host.ico" else null
+    // No bundled glyph (Play flavor, or a non-built-in site) -> the site's own icon.
+    val showFavicon = iconRes == null && !host.isNullOrBlank()
 
     val interaction = if (editMode) {
         dragHandle.clickable(onClick = onClick)
@@ -138,7 +136,7 @@ private fun DockItem(
                 .scale(if (dragging) 1.12f else 1f)
                 .alpha(if (active || editMode) 1f else 0.55f),
             shape = CircleShape,
-            color = service?.brandColor ?: if (faviconUrl != null) Color.White else MaterialTheme.colorScheme.surface,
+            color = service?.brandColor ?: if (showFavicon) Color.White else MaterialTheme.colorScheme.surface,
             border = BorderStroke(
                 width = if (active) 2.5.dp else 1.dp,
                 color = if (active) accent else accent.copy(alpha = 0.4f),
@@ -152,25 +150,19 @@ private fun DockItem(
                         tint = Color.White,
                         modifier = Modifier.size(22.dp),
                     )
-                    faviconUrl != null -> SubcomposeAsyncImage(
-                        model = faviconUrl,
+                    showFavicon -> SiteFavicon(
+                        host = host!!,
                         contentDescription = host,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize(),
-                    ) {
-                        if (painter.state is AsyncImagePainter.State.Success) {
-                            SubcomposeAsyncImageContent()
-                        } else {
-                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = Icons.Rounded.Public,
-                                    contentDescription = "Site",
-                                    tint = Color(0xFF1C1B1F),
-                                    modifier = Modifier.size(22.dp),
-                                )
-                            }
-                        }
-                    }
+                        modifier = Modifier.fillMaxSize().padding(9.dp),
+                        fallback = {
+                            Icon(
+                                imageVector = Icons.Rounded.Public,
+                                contentDescription = "Site",
+                                tint = Color(0xFF1C1B1F),
+                                modifier = Modifier.size(22.dp),
+                            )
+                        },
+                    )
                     else -> Icon(
                         imageVector = Icons.Rounded.Public,
                         contentDescription = "Site",
