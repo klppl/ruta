@@ -2,7 +2,7 @@
 ! Description: Built-in filter list maintained in the ruta repo. Add network, cosmetic and
 !   procedural (:has-text) rules here for granular control without depending on a remote list.
 ! Expires: 7 days
-! Version: 2
+! Version: 3
 !
 ! Syntax: standard Adblock Plus. ruta enforces:
 !   - Network:    ||host^   and   @@||host^   (host-anchored only)   plus hostfile lines
@@ -147,6 +147,19 @@ reddit.com##xpromo-nsfw-blocking-container[slot="blurred"]
 reddit.com##xpromo-nsfw-blocking-modal
 reddit.com##xpromo-untagged-content-blocking-modal
 reddit.com##xpromo-untagged-content-blocking-modal:remove()
+
+! --- TikTok ("Öppna appen"/"Open app" header pill, the "Få hela appupplevelsen" /
+!     "Get the full experience" modal, and the "Öppna TikTok"/"Open TikTok" bottom guide) ---
+! Class names are emotion-hashed as css-<hash>-f59ed85f--<Name>; the volatile <hash> is skipped
+! by matching the stable --<Name> component suffix via [class*=]. DivModalContainer wraps several
+! dialogs (login, share, …) — four on a logged-out For You page — so the app-nag modal is pinned
+! by its call-to-action text, Swedish and English, to leave real dialogs alone. The modal also
+! scroll-locks <body> (overflow:hidden); undone via :style() so the feed stays usable.
+tiktok.com##div[class*="DivOpenTikTokButtonWrapper"]
+tiktok.com##button[class*="ButtonCTAOpenApp"]
+tiktok.com##div[class*="DivCtaGuideContainer"]
+tiktok.com##div[class*="DivModalContainer"]:has-text(/hela appupplevelsen|hela upplevelsen|full experience|fuller experience|Öppna TikTok|Open TikTok|Open the app|Open app/i)
+tiktok.com##body:style(overflow: auto !important;)
 
 ! --- Facebook (collapse Reels / Suggested / discovery feed injections) ---
 www.facebook.com##:is([aria-posinset],[aria-describedby]:not([aria-posinset])):has([aria-label="Reels"]):style(height: 0 !important; overflow: hidden !important;)
