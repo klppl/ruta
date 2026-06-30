@@ -23,6 +23,7 @@ import io.github.klppl.ruta.ui.theme.accentForProfile
 fun RootScreen(
     externalUrl: String?,
     onExternalUrlHandled: () -> Unit,
+    homeRequest: Int,
     onExit: () -> Unit,
 ) {
     val browserViewModel: BrowserViewModel = hiltViewModel()
@@ -34,6 +35,12 @@ fun RootScreen(
             browserViewModel.openExternalLink(externalUrl)
             onExternalUrlHandled()
         }
+    }
+
+    // A launcher-icon relaunch (homeRequest bumped) returns to the dashboard. Guarded so the
+    // initial composition (homeRequest == 0) doesn't override a cold-start deep link.
+    LaunchedEffect(homeRequest) {
+        if (homeRequest > 0) browserViewModel.showDashboard()
     }
 
     RutaTheme(

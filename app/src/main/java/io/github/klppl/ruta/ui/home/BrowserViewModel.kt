@@ -119,7 +119,20 @@ class BrowserViewModel @Inject constructor(
                 isNewTab = false,
             )
         }
-        _activeId.value = session.activeId ?: _tabs.value.firstOrNull()?.id
+        // Restore the open sites into the dock but land on the dashboard, not whichever site
+        // was last open — the launcher is the entry point, and each dock site is one tap away.
+        _activeId.value = null
+    }
+
+    /**
+     * Return to the launcher dashboard while keeping every open site in the dock. Invoked when the
+     * app is (re)launched from the home-screen icon so users always get quick access to all sites
+     * first, rather than being dropped back into the last page they viewed.
+     */
+    fun showDashboard() {
+        _activeId.value = null
+        _showTabSwitcher.value = false
+        _dockVisible.value = true
     }
 
     // ---------------------------------------------------------------- tabs ---

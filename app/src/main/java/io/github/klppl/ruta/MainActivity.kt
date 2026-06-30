@@ -11,6 +11,7 @@ import android.webkit.WebChromeClient
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
@@ -30,6 +31,10 @@ class MainActivity : ComponentActivity() {
 
     // URL from an external ACTION_VIEW intent, consumed once by the composition then cleared.
     private val externalUrl = mutableStateOf<String?>(null)
+
+    // Bumped each time the launcher icon re-enters an already-running task, so the composition
+    // can return to the dashboard. A plain counter (not a flag) re-triggers on every relaunch.
+    private val homeRequest = mutableIntStateOf(0)
 
     private val fileChooserLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -65,6 +70,7 @@ class MainActivity : ComponentActivity() {
             RootScreen(
                 externalUrl = externalUrl.value,
                 onExternalUrlHandled = { externalUrl.value = null },
+                homeRequest = homeRequest.intValue,
                 onExit = { moveTaskToBack(true) },
             )
         }
@@ -75,11 +81,22 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        viewUrlOf(intent)?.let { externalUrl.value = it }
+        val viewUrl = viewUrlOf(intent)
+        when {
+            viewUrl != null -> externalUrl.value = viewUrl
+            // Tapping the launcher icon on a backgrounded (still-running) task arrives here as the
+            // MAIN/LAUNCHER intent — return to the dashboard. (Resuming from Recents delivers no
+            // new intent, so it keeps whatever site the user left open.)
+            isLauncherIntent(intent) -> homeRequest.intValue++
+        }
     }
 
     private fun viewUrlOf(intent: Intent?): String? =
         intent?.takeIf { it.action == Intent.ACTION_VIEW }?.dataString?.takeIf { it.isNotBlank() }
+
+    private fun isLauncherIntent(intent: Intent?): Boolean =
+        intent?.action == Intent.ACTION_MAIN &&
+            intent.categories?.contains(Intent.CATEGORY_LAUNCHER) == true
 
     override fun onDestroy() {
         // Don't leak this Activity into the singleton engine after teardown.
