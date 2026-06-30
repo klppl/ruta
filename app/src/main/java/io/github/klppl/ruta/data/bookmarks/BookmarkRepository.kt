@@ -46,8 +46,9 @@ class BookmarkRepository @Inject constructor(
     }
 
     suspend fun remove(id: String) {
+        val storedId = id.removePrefix("bookmark:")
         dataStore.edit { prefs ->
-            val current = decode(prefs[key]).filterNot { it.id == id }
+            val current = decode(prefs[key]).filterNot { it.id == storedId }
             prefs[key] = json.encodeToString(serializer, current)
         }
     }
