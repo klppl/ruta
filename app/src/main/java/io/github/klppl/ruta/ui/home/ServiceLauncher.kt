@@ -124,7 +124,8 @@ fun ServiceLauncher(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ServiceTile(service: AppService, onClick: () -> Unit, onLongClick: (() -> Unit)?) {
-    val background = if (service.isCustom) Color.White else service.brandColor
+    val brand = brandTileFor(service)
+    val background = brand?.second ?: if (service.isCustom) Color.White else service.brandColor
     val onColor = if (background.luminance() < 0.5f) Color.White else Color(0xFF1C1B1F)
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
@@ -136,15 +137,14 @@ private fun ServiceTile(service: AppService, onClick: () -> Unit, onLongClick: (
                 .combinedClickable(onClick = onClick, onLongClick = onLongClick),
             contentAlignment = Alignment.Center,
         ) {
-            val iconRes = brandIconRes(service.id)
             when {
-                iconRes != null -> Icon(
-                    painter = painterResource(iconRes),
+                brand != null -> Icon(
+                    painter = painterResource(brand.first),
                     contentDescription = service.name,
                     tint = onColor,
                     modifier = Modifier.size(34.dp),
                 )
-                // No bundled glyph (Play flavor, or a custom site) -> the site's own icon,
+                // No bundled glyph (a custom site at an unknown host) -> the site's own icon,
                 // centered and letterboxed rather than stretched across the whole tile.
                 service.host.isNotBlank() -> SiteFavicon(
                     host = service.host,
