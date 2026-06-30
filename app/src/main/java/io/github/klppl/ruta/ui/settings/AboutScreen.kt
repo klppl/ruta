@@ -69,7 +69,8 @@ fun AboutScreen(onBack: () -> Unit) {
                 "No analytics, no accounts, no ads, and no third-party tracking SDKs — ruta never " +
                     "reports on you. Its only background network calls are downloading the ad-block " +
                     "lists and fetching icons for added sites (from each site's own icon, falling " +
-                    "back to DuckDuckGo's icon service); everything else is just the sites you open.",
+                    "back to Google's and DuckDuckGo's icon services); everything else is just the " +
+                    "sites you open.",
             )
             Body(
                 "Cookies and logins are isolated per profile and kept on your device — app data is " +

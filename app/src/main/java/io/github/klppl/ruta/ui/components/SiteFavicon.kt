@@ -17,11 +17,15 @@ import coil.compose.SubcomposeAsyncImageContent
  * crisp instead of an upscaled 16px favicon:
  *
  *  1. the site's own `apple-touch-icon.png` (first-party, typically 120–180px),
- *  2. DuckDuckGo's icon service (small but reliable),
- *  3. [fallback] (a monogram or globe) when neither resolves.
+ *  2. Google's favicon service at `sz=256` (a real PNG, 64–256px for popular sites — this is
+ *     what recovers SPAs like instagram.com / x.com whose `/apple-touch-icon.png` answers 200
+ *     with an HTML shell, and 404-only hosts like bsky.app / linkedin.com / mastodon.social),
+ *  3. DuckDuckGo's icon service (small but reliable),
+ *  4. [fallback] (a monogram or globe) when none resolves.
  *
- * Each source is tried in turn: a load error advances to the next. Rendered with
- * [ContentScale.Fit] (not Crop) so a square app icon is letterboxed, never stretched.
+ * Each source is tried in turn: a load error (404, non-image, or undecodable body) advances to
+ * the next. Rendered with [ContentScale.Fit] (not Crop) so a square app icon is letterboxed,
+ * never stretched.
  */
 @Composable
 fun SiteFavicon(
@@ -34,6 +38,7 @@ fun SiteFavicon(
     val sources = remember(host) {
         listOf(
             "https://$host/apple-touch-icon.png",
+            "https://www.google.com/s2/favicons?domain=$host&sz=256",
             "https://icons.duckduckgo.com/ip3/$host.ico",
         )
     }
