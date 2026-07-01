@@ -20,4 +20,5 @@ data class AppSettings(
     val proxyEnabled: Boolean = false,
     val proxyUrl: String = "",
     val appLock: Boolean = false,
+    val searchEngine: String = "duckduckgo",
 )

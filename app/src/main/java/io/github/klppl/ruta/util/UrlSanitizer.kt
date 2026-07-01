@@ -11,7 +11,7 @@ object UrlSanitizer {
     /** Always stripped, regardless of host. */
     private val globalParams = setOf(
         "fbclid", "gclid", "dclid", "msclkid", "mc_eid", "mc_cid",
-        "igsh", "igshid", "xmt", "si", "ref_src", "ref_url",
+        "igsh", "igshid", "xmt", "ref_src", "ref_url",
         "share_id", "rdt", "correlation_id",
     )
 
@@ -25,7 +25,11 @@ object UrlSanitizer {
         "instagram.com" to setOf("igsh", "igshid", "img_index"),
         "tiktok.com" to setOf("is_from_webapp", "sender_device", "web_id", "_r", "_t"),
         "reddit.com" to setOf("ref", "ref_source", "share_id", "rdt", "correlation_id"),
+        // "si" is a share-tracking param only on YouTube/Spotify — stripping it globally
+        // would break legitimate `si` params elsewhere.
         "youtube.com" to setOf("feature", "pp", "si"),
+        "youtu.be" to setOf("feature", "pp", "si"),
+        "spotify.com" to setOf("si"),
         "facebook.com" to setOf("mibextid", "rdid", "comment_id"),
     )
 

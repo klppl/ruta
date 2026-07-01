@@ -96,6 +96,7 @@ class SettingsViewModel @Inject constructor(
     fun setThirdPartyCookies(v: Boolean) = launch { settingsRepository.setThirdPartyCookies(v) }
     fun setDoubleBack(v: Boolean) = launch { settingsRepository.setDoubleBack(v) }
     fun setPullToRefresh(v: Boolean) = launch { settingsRepository.setPullToRefresh(v) }
+    fun setSearchEngine(id: String) = launch { settingsRepository.setSearchEngine(id) }
     fun setOpenLinksExternally(v: Boolean) = launch { settingsRepository.setOpenLinksExternally(v) }
     fun setPerSiteProfile(v: Boolean) = launch { settingsRepository.setPerSiteProfile(v) }
     fun setProxyEnabled(v: Boolean) = launch { settingsRepository.setProxyEnabled(v) }

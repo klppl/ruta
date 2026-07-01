@@ -4,6 +4,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -41,10 +43,11 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.klppl.ruta.model.SearchEngines
 import io.github.klppl.ruta.profile.Profile
 import io.github.klppl.ruta.ui.theme.ThemeMode
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
@@ -215,6 +218,19 @@ fun SettingsScreen(
             )
 
             Section("Browsing")
+            Text("Search engine", style = MaterialTheme.typography.bodyLarge)
+            FlowRow(
+                modifier = Modifier.padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                SearchEngines.all.forEach { engine ->
+                    FilterChip(
+                        selected = settings.searchEngine == engine.id,
+                        onClick = { viewModel.setSearchEngine(engine.id) },
+                        label = { Text(engine.name) },
+                    )
+                }
+            }
             SettingSwitch("Pull down to refresh", settings.pullToRefresh, viewModel::setPullToRefresh)
             SettingSwitch("Open external links in your browser", settings.openLinksExternally, viewModel::setOpenLinksExternally)
             SettingSwitch("Separate profile per site", settings.separateProfilePerSite, viewModel::setPerSiteProfile)

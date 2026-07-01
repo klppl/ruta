@@ -18,6 +18,7 @@ import io.github.klppl.ruta.data.settings.SettingsRepository
 import io.github.klppl.ruta.data.tabs.TabRepository
 import io.github.klppl.ruta.model.AppService
 import io.github.klppl.ruta.model.ContextTarget
+import io.github.klppl.ruta.model.SearchEngines
 import io.github.klppl.ruta.model.Services
 import io.github.klppl.ruta.model.Tab
 import io.github.klppl.ruta.profile.Profile
@@ -594,7 +595,7 @@ class BrowserViewModel @Inject constructor(
         return if (looksLikeHost) {
             if (input.startsWith("http://") || input.startsWith("https://")) input else "https://$input"
         } else {
-            "https://duckduckgo.com/?q=" + android.net.Uri.encode(input)
+            SearchEngines.searchUrl(settings.value.searchEngine, input)
         }
     }
 
