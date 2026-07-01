@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -25,6 +26,8 @@ fun RootScreen(
     onExternalUrlHandled: () -> Unit,
     homeRequest: Int,
     onExit: () -> Unit,
+    locked: Boolean = false,
+    onUnlockRequest: () -> Unit = {},
 ) {
     val browserViewModel: BrowserViewModel = hiltViewModel()
     val settings by browserViewModel.settings.collectAsStateWithLifecycle()
@@ -48,30 +51,35 @@ fun RootScreen(
         dynamicColor = settings.dynamicColor,
         accent = accentForProfile(activeTab?.profileId ?: ""),
     ) {
-        val navController = rememberNavController()
-        NavHost(
-            navController = navController,
-            startDestination = "home",
-            enterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(220)) },
-            exitTransition = { fadeOut(tween(140)) },
-            popEnterTransition = { fadeIn(tween(140)) },
-            popExitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(220)) },
-        ) {
-            composable("home") {
-                HomeScreen(
-                    viewModel = browserViewModel,
-                    onOpenSettings = { navController.navigate("settings") },
-                    onExit = onExit,
-                )
+        Box {
+            val navController = rememberNavController()
+            NavHost(
+                navController = navController,
+                startDestination = "home",
+                enterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(220)) },
+                exitTransition = { fadeOut(tween(140)) },
+                popEnterTransition = { fadeIn(tween(140)) },
+                popExitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(220)) },
+            ) {
+                composable("home") {
+                    HomeScreen(
+                        viewModel = browserViewModel,
+                        onOpenSettings = { navController.navigate("settings") },
+                        onExit = onExit,
+                    )
+                }
+                composable("settings") {
+                    SettingsScreen(
+                        onBack = { navController.popBackStack() },
+                        onOpenAbout = { navController.navigate("about") },
+                    )
+                }
+                composable("about") {
+                    AboutScreen(onBack = { navController.popBackStack() })
+                }
             }
-            composable("settings") {
-                SettingsScreen(
-                    onBack = { navController.popBackStack() },
-                    onOpenAbout = { navController.navigate("about") },
-                )
-            }
-            composable("about") {
-                AboutScreen(onBack = { navController.popBackStack() })
+            if (locked) {
+                LockScreen(onUnlock = onUnlockRequest)
             }
         }
     }

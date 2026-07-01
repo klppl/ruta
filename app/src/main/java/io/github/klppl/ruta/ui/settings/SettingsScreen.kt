@@ -198,6 +198,15 @@ fun SettingsScreen(
             }
             TextButton(onClick = { showAddFilterList = true }) { Text("+ Add filter list") }
 
+            Section("Security")
+            SettingSwitch("Lock ruta behind fingerprint / screen lock", settings.appLock, viewModel::setAppLock)
+            Text(
+                "Asks for your fingerprint (or device PIN) when ruta is opened or brought back " +
+                    "from the background.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
             Section("Browsing")
             SettingSwitch("Pull down to refresh", settings.pullToRefresh, viewModel::setPullToRefresh)
             SettingSwitch("Open external links in your browser", settings.openLinksExternally, viewModel::setOpenLinksExternally)

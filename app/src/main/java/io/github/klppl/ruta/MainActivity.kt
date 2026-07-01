@@ -8,26 +8,40 @@ import android.os.Bundle
 import android.webkit.PermissionRequest
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricPrompt
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.lifecycleScope
 import io.github.klppl.ruta.browser.BrowserEngine
+import io.github.klppl.ruta.data.settings.SettingsRepository
 import io.github.klppl.ruta.ui.RootScreen
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
 
+// FragmentActivity (not ComponentActivity) because androidx.biometric's prompt requires it.
 @AndroidEntryPoint
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
 
     @Inject lateinit var engine: BrowserEngine
+    @Inject lateinit var settingsRepository: SettingsRepository
 
     private var pendingFileCallback: ValueCallback<Array<Uri>>? = null
     private var pendingPermission: PermissionRequest? = null
+
+    // App-lock state: locked shows the in-app lock overlay; appLockEnabled mirrors the setting.
+    private val locked = mutableStateOf(false)
+    private var appLockEnabled = false
+    private var promptShowing = false
 
     // URL from an external ACTION_VIEW intent, consumed once by the composition then cleared.
     private val externalUrl = mutableStateOf<String?>(null)
@@ -64,6 +78,14 @@ class MainActivity : ComponentActivity() {
         engine.attachActivity(this)
         wireEngineHandlers()
 
+        // Synchronous read so a cold start can't flash unlocked content before the setting
+        // arrives (DataStore's first read is a few ms).
+        appLockEnabled = runBlocking { settingsRepository.settings.first().appLock }
+        locked.value = appLockEnabled
+        lifecycleScope.launch {
+            settingsRepository.settings.collect { appLockEnabled = it.appLock }
+        }
+
         externalUrl.value = viewUrlOf(intent)
 
         setContent {
@@ -72,8 +94,50 @@ class MainActivity : ComponentActivity() {
                 onExternalUrlHandled = { externalUrl.value = null },
                 homeRequest = homeRequest.intValue,
                 onExit = { moveTaskToBack(true) },
+                locked = locked.value,
+                onUnlockRequest = { promptUnlock() },
             )
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        if (locked.value) promptUnlock()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // Re-lock whenever the app leaves the foreground (the biometric prompt itself only
+        // pauses the activity, so it doesn't retrigger this).
+        if (appLockEnabled) locked.value = true
+    }
+
+    private fun promptUnlock() {
+        if (promptShowing || !locked.value) return
+        promptShowing = true
+        val prompt = BiometricPrompt(
+            this,
+            ContextCompat.getMainExecutor(this),
+            object : BiometricPrompt.AuthenticationCallback() {
+                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                    promptShowing = false
+                    locked.value = false
+                }
+
+                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                    // Cancelled / too many attempts: stay locked; the overlay's Unlock button retries.
+                    promptShowing = false
+                }
+            },
+        )
+        val info = BiometricPrompt.PromptInfo.Builder()
+            .setTitle("Unlock ruta")
+            .setAllowedAuthenticators(
+                BiometricManager.Authenticators.BIOMETRIC_WEAK or
+                    BiometricManager.Authenticators.DEVICE_CREDENTIAL,
+            )
+            .build()
+        prompt.authenticate(info)
     }
 
     // launchMode is singleTask, so links tapped while ruta is already running arrive here, not in

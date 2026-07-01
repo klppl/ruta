@@ -18,4 +18,5 @@ data class AppSettings(
     val separateProfilePerSite: Boolean = false,
     val proxyEnabled: Boolean = false,
     val proxyUrl: String = "",
+    val appLock: Boolean = false,
 )

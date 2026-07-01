@@ -3,6 +3,7 @@ package io.github.klppl.ruta.ui.settings
 import android.content.Context
 import android.net.Uri
 import android.widget.Toast
+import androidx.biometric.BiometricManager
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.klppl.ruta.data.backup.BackupManager
@@ -98,6 +99,21 @@ class SettingsViewModel @Inject constructor(
     fun setPerSiteProfile(v: Boolean) = launch { settingsRepository.setPerSiteProfile(v) }
     fun setProxyEnabled(v: Boolean) = launch { settingsRepository.setProxyEnabled(v) }
     fun setProxyUrl(v: String) = launch { settingsRepository.setProxyUrl(v) }
+
+    /** Enables the app lock only when the device can actually authenticate the user. */
+    fun setAppLock(enabled: Boolean) {
+        if (enabled) {
+            val can = BiometricManager.from(appContext).canAuthenticate(
+                BiometricManager.Authenticators.BIOMETRIC_WEAK or
+                    BiometricManager.Authenticators.DEVICE_CREDENTIAL,
+            )
+            if (can != BiometricManager.BIOMETRIC_SUCCESS) {
+                toast("Set up a screen lock or fingerprint in Android settings first")
+                return
+            }
+        }
+        launch { settingsRepository.setAppLock(enabled) }
+    }
     fun setGlobalCss(css: String) = launch { styleRepository.setGlobalCss(css) }
     fun refreshLists() = launch { blocklist.refresh(force = true) }
     fun deleteProfile(id: String) = launch { profileManager.deleteProfile(id) }

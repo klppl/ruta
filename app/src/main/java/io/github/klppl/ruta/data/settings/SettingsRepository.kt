@@ -31,6 +31,7 @@ class SettingsRepository @Inject constructor(
         val perSiteProfile = booleanPreferencesKey("per_site_profile")
         val proxyEnabled = booleanPreferencesKey("proxy_enabled")
         val proxyUrl = stringPreferencesKey("proxy_url")
+        val appLock = booleanPreferencesKey("app_lock")
     }
 
     val settings: Flow<AppSettings> = dataStore.data.map { p ->
@@ -51,6 +52,7 @@ class SettingsRepository @Inject constructor(
             separateProfilePerSite = p[Keys.perSiteProfile] ?: false,
             proxyEnabled = p[Keys.proxyEnabled] ?: false,
             proxyUrl = p[Keys.proxyUrl] ?: "",
+            appLock = p[Keys.appLock] ?: false,
         )
     }
 
@@ -69,6 +71,7 @@ class SettingsRepository @Inject constructor(
     suspend fun setPerSiteProfile(value: Boolean) = edit { it[Keys.perSiteProfile] = value }
     suspend fun setProxyEnabled(value: Boolean) = edit { it[Keys.proxyEnabled] = value }
     suspend fun setProxyUrl(value: String) = edit { it[Keys.proxyUrl] = value }
+    suspend fun setAppLock(value: Boolean) = edit { it[Keys.appLock] = value }
 
     private suspend fun edit(block: (androidx.datastore.preferences.core.MutablePreferences) -> Unit) {
         dataStore.edit(block)
