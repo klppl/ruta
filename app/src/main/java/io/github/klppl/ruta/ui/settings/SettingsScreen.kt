@@ -234,8 +234,27 @@ fun SettingsScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+            var profileToClear by remember { mutableStateOf<Profile?>(null) }
             profiles.forEach { profile ->
-                ProfileRow(profile = profile, onDelete = { viewModel.deleteProfile(profile.id) })
+                ProfileRow(
+                    profile = profile,
+                    onClearData = { profileToClear = profile },
+                    onDelete = { viewModel.deleteProfile(profile.id) },
+                )
+            }
+            profileToClear?.let { profile ->
+                AlertDialog(
+                    onDismissRequest = { profileToClear = null },
+                    title = { Text("Clear ${profile.name}'s data?") },
+                    text = { Text("All cookies and site data in this profile are deleted — you'll be signed out of every site it holds. The profile itself is kept.") },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            viewModel.clearProfileData(profile.id)
+                            profileToClear = null
+                        }) { Text("Clear") }
+                    },
+                    dismissButton = { TextButton(onClick = { profileToClear = null }) { Text("Cancel") } },
+                )
             }
 
             Section("Custom CSS")
@@ -291,16 +310,15 @@ private fun SettingSwitch(title: String, checked: Boolean, onCheckedChange: (Boo
 }
 
 @Composable
-private fun ProfileRow(profile: Profile, onDelete: () -> Unit) {
+private fun ProfileRow(profile: Profile, onClearData: () -> Unit, onDelete: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(profile.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        TextButton(onClick = onClearData) { Text("Clear data") }
         if (!profile.isDefault) {
             TextButton(onClick = onDelete) { Text("Delete") }
-        } else {
-            Text("Default", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

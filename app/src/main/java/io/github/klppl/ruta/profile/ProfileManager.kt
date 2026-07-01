@@ -101,6 +101,30 @@ class ProfileManager @Inject constructor(
         }
     }
 
+    /** The cookie store backing [profileId]'s WebViews (the global one for the default profile). */
+    fun cookieManagerFor(profileId: String?): CookieManager {
+        if (multiProfileSupported && !profileId.isNullOrEmpty() && profileId != Tab.DEFAULT_PROFILE_ID) {
+            runCatching {
+                return ProfileStore.getInstance()
+                    .getOrCreateProfile(webViewProfileName(profileId))
+                    .cookieManager
+            }
+        }
+        return CookieManager.getInstance()
+    }
+
+    /** The web storage backing [profileId]'s WebViews (the global one for the default profile). */
+    fun webStorageFor(profileId: String?): WebStorage {
+        if (multiProfileSupported && !profileId.isNullOrEmpty() && profileId != Tab.DEFAULT_PROFILE_ID) {
+            runCatching {
+                return ProfileStore.getInstance()
+                    .getOrCreateProfile(webViewProfileName(profileId))
+                    .webStorage
+            }
+        }
+        return WebStorage.getInstance()
+    }
+
     private fun webViewProfileName(profileId: String): String =
         "ruta_" + profileId.replace(Regex("[^A-Za-z0-9]"), "_")
 

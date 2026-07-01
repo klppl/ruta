@@ -11,6 +11,7 @@ import androidx.compose.foundation.background
 import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.CleaningServices
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.DesktopWindows
 import androidx.compose.material.icons.rounded.Download
@@ -42,6 +43,7 @@ fun ControlsSheet(
     onToggleDesktop: () -> Unit,
     onDownloadMedia: () -> Unit,
     onFindInPage: () -> Unit,
+    onClearSiteData: () -> Unit,
     onToggleAdBlock: (Boolean) -> Unit,
     onShowTabs: () -> Unit,
     onOpenSettings: () -> Unit,
@@ -80,6 +82,7 @@ fun ControlsSheet(
             onCheckedChange = onToggleAdBlock,
         )
         if (host != null) LinkRow(Icons.Rounded.FindInPage, "Find in page", onFindInPage)
+        if (host != null) LinkRow(Icons.Rounded.CleaningServices, "Clear site data…", onClearSiteData)
         LinkRow(Icons.Rounded.GridView, "All tabs", onShowTabs)
         LinkRow(Icons.Rounded.Settings, "Settings", onOpenSettings)
     }

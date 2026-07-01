@@ -407,6 +407,9 @@ class BrowserViewModel @Inject constructor(
 
     fun downloadMedia() = _activeId.value?.let(engine::requestMediaDownload)
 
+    /** Clears cookies + storage for the active tab's site (its profile only) and reloads. */
+    fun clearActiveSiteData() = _activeId.value?.let(engine::clearSiteData)
+
     // --------------------------------------------------------- find in page ---
 
     fun startFind() {

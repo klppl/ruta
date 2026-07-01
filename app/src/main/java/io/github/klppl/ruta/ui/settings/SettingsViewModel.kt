@@ -1,5 +1,7 @@
 package io.github.klppl.ruta.ui.settings
 
+import android.content.Context
+import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.klppl.ruta.blocking.BlocklistRepository
@@ -14,6 +16,7 @@ import io.github.klppl.ruta.profile.Profile
 import io.github.klppl.ruta.profile.ProfileManager
 import io.github.klppl.ruta.ui.theme.ThemeMode
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -25,6 +28,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
+    @ApplicationContext private val appContext: Context,
     private val settingsRepository: SettingsRepository,
     private val styleRepository: StyleRepository,
     private val profileManager: ProfileManager,
@@ -94,6 +98,12 @@ class SettingsViewModel @Inject constructor(
     fun setGlobalCss(css: String) = launch { styleRepository.setGlobalCss(css) }
     fun refreshLists() = launch { blocklist.refresh(force = true) }
     fun deleteProfile(id: String) = launch { profileManager.deleteProfile(id) }
+
+    /** Wipes cookies + web storage for [id] ("log out of everything" for that profile). */
+    fun clearProfileData(id: String) {
+        profileManager.wipe(id)
+        Toast.makeText(appContext, "Data cleared — open sites sign out on reload", Toast.LENGTH_SHORT).show()
+    }
 
     private fun launch(block: suspend () -> Unit) {
         viewModelScope.launch { block() }

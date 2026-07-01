@@ -73,6 +73,7 @@ class BrowserEngine @Inject constructor(
     @Volatile private var currentSettings: AppSettings = AppSettings()
     private val desktopByTab = HashMap<String, Boolean>()
     private val darkByTab = HashMap<String, Boolean>()
+    private val profileByTab = HashMap<String, String>()
     // Popups awaiting their first navigation so we can route external links out to the browser.
     private val pendingPopups = HashMap<String, PendingPopup>()
 
@@ -112,6 +113,7 @@ class BrowserEngine @Inject constructor(
         pool.put(tab.id, webView)
         desktopByTab[tab.id] = tab.desktopMode
         darkByTab[tab.id] = currentSettings.forceDarkWebsites
+        profileByTab[tab.id] = tab.profileId
         if (tab.url.isNotBlank()) webView.loadUrl(tab.url)
         return webView
     }
@@ -129,6 +131,7 @@ class BrowserEngine @Inject constructor(
         pool.remove(tabId)
         desktopByTab.remove(tabId)
         darkByTab.remove(tabId)
+        profileByTab.remove(tabId)
         pendingPopups.remove(tabId)
     }
 
@@ -144,6 +147,37 @@ class BrowserEngine @Inject constructor(
     fun requestMediaDownload(tabId: String) {
         val webView = pool.get(tabId) ?: return
         contentScriptInjector.requestMedia(webView)
+    }
+
+    /**
+     * Clears the active site's cookies and web storage in this tab's profile, then reloads —
+     * effectively "log out of this site" without touching other sites in the same profile.
+     * Cookie stores can't be enumerated per-domain, so each cookie visible for the current
+     * origin is expired individually (both host-scoped and `.domain`-scoped variants).
+     */
+    fun clearSiteData(tabId: String) {
+        val webView = pool.get(tabId) ?: return
+        val host = Hosts.hostOf(webView.url) ?: return
+        val profileId = profileByTab[tabId]
+        val cookies = profileManager.cookieManagerFor(profileId)
+        val origin = "https://$host"
+        cookies.getCookie(origin)?.split(';')?.forEach { cookie ->
+            val name = cookie.substringBefore('=').trim()
+            if (name.isEmpty()) return@forEach
+            cookies.setCookie(origin, "$name=; Max-Age=0; Path=/")
+            Hosts.registrable(host)?.let { domain ->
+                cookies.setCookie(origin, "$name=; Max-Age=0; Path=/; Domain=.$domain")
+            }
+        }
+        cookies.flush()
+        val storage = profileManager.webStorageFor(profileId)
+        storage.deleteOrigin(origin)
+        Hosts.registrable(host)?.takeIf { it != host }?.let { storage.deleteOrigin("https://$it") }
+        webView.evaluateJavascript(
+            "try{localStorage.clear();sessionStorage.clear()}catch(e){}",
+            null,
+        )
+        webView.reload()
     }
 
     // ------------------------------------------------------------ find in page ---
@@ -349,6 +383,7 @@ class BrowserEngine @Inject constructor(
         pool.put(childId, child)
         desktopByTab[childId] = parent.desktopMode
         darkByTab[childId] = currentSettings.forceDarkWebsites
+        profileByTab[childId] = parent.profileId
         pendingPopups[childId] = PendingPopup(
             parentUrl = source.url,
             profileId = parent.profileId,

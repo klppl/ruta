@@ -82,6 +82,7 @@ fun HomeScreen(
     var bookmarkToEdit by remember { mutableStateOf<AppService?>(null) }
     var dockEditMode by remember { mutableStateOf(false) }
     var gridEditMode by remember { mutableStateOf(false) }
+    var showClearSiteData by remember { mutableStateOf(false) }
 
     BackHandler(enabled = true) {
         if (dockEditMode) dockEditMode = false
@@ -263,6 +264,7 @@ fun HomeScreen(
                 onToggleDesktop = { showControls = false; viewModel.toggleDesktopMode() },
                 onDownloadMedia = { showControls = false; viewModel.downloadMedia() },
                 onFindInPage = { showControls = false; viewModel.startFind() },
+                onClearSiteData = { showControls = false; showClearSiteData = true },
                 onToggleAdBlock = viewModel::setAdBlockEnabled,
                 onShowTabs = { showControls = false; viewModel.setShowTabSwitcher(true) },
                 onOpenSettings = { showControls = false; onOpenSettings() },
@@ -323,6 +325,22 @@ fun HomeScreen(
                 bookmarkToEdit = null
             },
             onDismiss = { bookmarkToEdit = null },
+        )
+    }
+
+    if (showClearSiteData) {
+        val site = Hosts.hostOf(activeTab?.url) ?: "this site"
+        AlertDialog(
+            onDismissRequest = { showClearSiteData = false },
+            title = { Text("Clear data for $site?") },
+            text = { Text("Cookies and stored data for this site are deleted and the page reloads. You'll be signed out of it. Other sites are unaffected.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.clearActiveSiteData()
+                    showClearSiteData = false
+                }) { Text("Clear") }
+            },
+            dismissButton = { TextButton(onClick = { showClearSiteData = false }) { Text("Cancel") } },
         )
     }
 
