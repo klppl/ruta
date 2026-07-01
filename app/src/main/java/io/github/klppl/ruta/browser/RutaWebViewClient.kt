@@ -16,6 +16,7 @@ import java.io.ByteArrayInputStream
 class RutaWebViewClient(
     private val tabId: String,
     private val requestBlocker: RequestBlocker,
+    private val onBlocked: () -> Unit,
     private val onStarted: (url: String, favicon: Bitmap?) -> Unit,
     private val onFinished: (url: String) -> Unit,
     private val onUrl: (url: String, canGoBack: Boolean) -> Unit,
@@ -29,7 +30,12 @@ class RutaWebViewClient(
     ): WebResourceResponse? {
         if (request.isForMainFrame) return null
         val host = request.url.host ?: return null
-        return if (requestBlocker.shouldBlock(host)) BLOCKED else null
+        return if (requestBlocker.shouldBlock(host)) {
+            onBlocked()
+            BLOCKED
+        } else {
+            null
+        }
     }
 
     override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {

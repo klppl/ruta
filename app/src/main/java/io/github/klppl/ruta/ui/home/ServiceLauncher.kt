@@ -37,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.github.klppl.ruta.blocking.BlockStats
 import io.github.klppl.ruta.ui.components.SiteFavicon
 import io.github.klppl.ruta.model.AppService
 import io.github.klppl.ruta.model.Services
@@ -51,11 +52,21 @@ fun ServiceLauncher(
     onAddProfile: () -> Unit,
     onOpenService: (AppService) -> Unit,
     onSearch: () -> Unit,
-    customServices: List<AppService>,
+    dashboardServices: List<AppService>,
+    stats: BlockStats,
+    rulesLoaded: Int,
+    onRemoveService: (AppService) -> Unit,
     onAddCustom: () -> Unit,
-    onRemoveCustom: (AppService) -> Unit,
+    onOpenCatalog: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Once the user has any of their own sites the launcher shows just those (decluttered), with
+    // the rest of the catalog behind "+". Before that — a fresh install — it shows the built-ins
+    // as suggestions so there's something to tap, and "+" adds a custom URL.
+    val hasSites = dashboardServices.isNotEmpty()
+    val tiles = if (hasSites) dashboardServices else Services.all
+    val onAddTile = if (hasSites) onOpenCatalog else onAddCustom
+
     Column(modifier = modifier.fillMaxSize().padding(horizontal = 20.dp)) {
         Text(
             text = "ruta",
@@ -99,6 +110,20 @@ fun ServiceLauncher(
             onAddProfile = onAddProfile,
             modifier = Modifier.padding(bottom = 16.dp),
         )
+        if (stats.total > 0) {
+            DashboardStats(
+                stats = stats,
+                sites = dashboardServices.size,
+                rulesLoaded = rulesLoaded,
+                modifier = Modifier.padding(bottom = 16.dp),
+            )
+        }
+        Text(
+            text = if (hasSites) "Your sites" else "Suggested",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(bottom = 12.dp),
+        )
         LazyVerticalGrid(
             columns = GridCells.Adaptive(minSize = 96.dp),
             horizontalArrangement = Arrangement.spacedBy(14.dp),
@@ -106,28 +131,30 @@ fun ServiceLauncher(
             contentPadding = PaddingValues(bottom = 120.dp),
             modifier = Modifier.fillMaxWidth(),
         ) {
-            items(Services.all, key = { it.id }) { service ->
-                ServiceTile(service = service, onClick = { onOpenService(service) }, onLongClick = null)
-            }
-            items(customServices, key = { it.id }) { service ->
+            items(tiles, key = { it.id }) { service ->
                 ServiceTile(
                     service = service,
                     onClick = { onOpenService(service) },
-                    onLongClick = { onRemoveCustom(service) },
+                    onLongClick = if (hasSites) ({ onRemoveService(service) }) else null,
                 )
             }
-            item(key = "__add_custom") { AddTile(onClick = onAddCustom) }
+            item(key = "__add") { AddTile(onClick = onAddTile) }
         }
     }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ServiceTile(service: AppService, onClick: () -> Unit, onLongClick: (() -> Unit)?) {
+internal fun ServiceTile(
+    service: AppService,
+    onClick: () -> Unit,
+    onLongClick: (() -> Unit)?,
+    modifier: Modifier = Modifier,
+) {
     val brand = brandTileFor(service)
     val background = brand?.second ?: if (service.isCustom) Color.White else service.brandColor
     val onColor = if (background.luminance() < 0.5f) Color.White else Color(0xFF1C1B1F)
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -184,7 +211,7 @@ private fun AddTile(onClick: () -> Unit) {
         ) {
             Icon(
                 Icons.Rounded.Add,
-                contentDescription = "Add custom site",
+                contentDescription = "Add site",
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(34.dp),
             )

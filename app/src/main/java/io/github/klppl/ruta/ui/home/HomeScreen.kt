@@ -68,12 +68,15 @@ fun HomeScreen(
     val contextTarget by viewModel.contextTarget.collectAsStateWithLifecycle()
     val blockStatus by viewModel.blocklistStatus.collectAsStateWithLifecycle()
     val dockVisible by viewModel.dockVisible.collectAsStateWithLifecycle()
-    val customServices by viewModel.customServices.collectAsStateWithLifecycle()
+    val dashboardServices by viewModel.dashboardServices.collectAsStateWithLifecycle()
+    val addableServices by viewModel.addableServices.collectAsStateWithLifecycle()
+    val blockStats by viewModel.blockStats.collectAsStateWithLifecycle()
     val dockTabs = remember(tabs) { tabs.filterNot { it.isNewTab } }
 
     var showControls by remember { mutableStateOf(false) }
     var editingUrl by remember { mutableStateOf(false) }
     var showAddCustom by remember { mutableStateOf(false) }
+    var showAddSheet by remember { mutableStateOf(false) }
     var bookmarkToRemove by remember { mutableStateOf<AppService?>(null) }
     var dockEditMode by remember { mutableStateOf(false) }
 
@@ -115,9 +118,12 @@ fun HomeScreen(
                         onAddProfile = { viewModel.createProfile("Account ${profiles.size}") },
                         onOpenService = viewModel::openService,
                         onSearch = { editingUrl = true },
-                        customServices = customServices,
+                        dashboardServices = dashboardServices,
+                        stats = blockStats,
+                        rulesLoaded = blockStatus.networkRules,
+                        onRemoveService = { bookmarkToRemove = it },
                         onAddCustom = { showAddCustom = true },
-                        onRemoveCustom = { bookmarkToRemove = it },
+                        onOpenCatalog = { showAddSheet = true },
                         modifier = contentModifier,
                     )
                 } else {
@@ -249,6 +255,25 @@ fun HomeScreen(
         }
     }
 
+    if (showAddSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showAddSheet = false },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        ) {
+            AddServiceSheet(
+                addable = addableServices,
+                onOpenService = {
+                    showAddSheet = false
+                    viewModel.openService(it)
+                },
+                onAddCustom = {
+                    showAddSheet = false
+                    showAddCustom = true
+                },
+            )
+        }
+    }
+
     if (showAddCustom) {
         AddCustomDialog(
             onAdd = { name, url ->
@@ -263,9 +288,15 @@ fun HomeScreen(
         AlertDialog(
             onDismissRequest = { bookmarkToRemove = null },
             title = { Text("Remove ${bookmark.name}?") },
+            text = {
+                Text(
+                    if (bookmark.isCustom) "This custom site will be deleted."
+                    else "It stays available under the + button.",
+                )
+            },
             confirmButton = {
                 TextButton(onClick = {
-                    viewModel.removeBookmark(bookmark.id)
+                    viewModel.removeFromDashboard(bookmark)
                     bookmarkToRemove = null
                 }) { Text("Remove") }
             },

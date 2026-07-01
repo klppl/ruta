@@ -9,8 +9,10 @@ import androidx.lifecycle.viewModelScope
 import io.github.klppl.ruta.browser.BrowserEngine
 import io.github.klppl.ruta.browser.MediaResolver
 import io.github.klppl.ruta.browser.TabEvents
+import io.github.klppl.ruta.blocking.BlockStatsRepository
 import io.github.klppl.ruta.blocking.BlocklistRepository
 import io.github.klppl.ruta.data.bookmarks.BookmarkRepository
+import io.github.klppl.ruta.data.launcher.PinnedServicesRepository
 import io.github.klppl.ruta.data.settings.SettingsRepository
 import io.github.klppl.ruta.data.tabs.TabRepository
 import io.github.klppl.ruta.model.AppService
@@ -47,6 +49,8 @@ class BrowserViewModel @Inject constructor(
     private val tabRepository: TabRepository,
     private val settingsRepository: SettingsRepository,
     private val bookmarkRepository: BookmarkRepository,
+    private val pinnedServicesRepository: PinnedServicesRepository,
+    blockStatsRepository: BlockStatsRepository,
     blocklistRepository: BlocklistRepository,
 ) : ViewModel(), TabEvents {
 
@@ -73,8 +77,28 @@ class BrowserViewModel @Inject constructor(
 
     val blocklistStatus = blocklistRepository.status
 
+    val blockStats = blockStatsRepository.stats
+
     val customServices: StateFlow<List<AppService>> = bookmarkRepository.bookmarks
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    private val pinnedIds: StateFlow<List<String>> = pinnedServicesRepository.pinnedIds
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    /**
+     * The sites shown on the launcher: the built-ins the user has pinned (in pin order) followed
+     * by their custom sites. Built-ins the user hasn't used yet stay in the "+" catalog. When this
+     * is empty the launcher falls back to showing [Services.all] as suggestions.
+     */
+    val dashboardServices: StateFlow<List<AppService>> =
+        combine(pinnedIds, customServices) { ids, customs ->
+            ids.mapNotNull { id -> Services.all.firstOrNull { it.id == id } } + customs
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    /** Built-in services not yet on the dashboard — the contents of the "+" add-site picker. */
+    val addableServices: StateFlow<List<AppService>> = pinnedIds
+        .map { ids -> Services.all.filterNot { it.id in ids } }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, Services.all)
 
     fun addBookmark(name: String, url: String) {
         viewModelScope.launch { bookmarkRepository.add(name, url) }
@@ -82,6 +106,19 @@ class BrowserViewModel @Inject constructor(
 
     fun removeBookmark(id: String) {
         viewModelScope.launch { bookmarkRepository.remove(id) }
+    }
+
+    /** Remove a site from the dashboard: delete a custom bookmark, or un-pin a built-in. */
+    fun removeFromDashboard(service: AppService) {
+        if (service.isCustom) removeBookmark(service.id) else unpinService(service.id)
+    }
+
+    private fun pinService(id: String) {
+        viewModelScope.launch { pinnedServicesRepository.pin(id) }
+    }
+
+    fun unpinService(id: String) {
+        viewModelScope.launch { pinnedServicesRepository.unpin(id) }
     }
 
     val profiles: StateFlow<List<Profile>> = profileManager.userProfiles
@@ -248,6 +285,9 @@ class BrowserViewModel @Inject constructor(
     }
 
     fun openService(service: AppService) {
+        // Opening a built-in adds it to the dashboard so the launcher reflects the sites you use.
+        // Custom sites are already persisted as bookmarks.
+        if (!service.isCustom) pinService(service.id)
         val profileId = if (settings.value.separateProfilePerSite) {
             Profile.siteId(service.host)
         } else {

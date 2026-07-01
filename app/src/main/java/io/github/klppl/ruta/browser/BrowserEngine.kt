@@ -22,6 +22,7 @@ import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebViewFeature
 import io.github.klppl.ruta.BuildConfig
 import io.github.klppl.ruta.R
+import io.github.klppl.ruta.blocking.BlockStatsRepository
 import io.github.klppl.ruta.blocking.BlocklistRepository
 import io.github.klppl.ruta.blocking.RequestBlocker
 import io.github.klppl.ruta.data.settings.AppSettings
@@ -51,6 +52,7 @@ class BrowserEngine @Inject constructor(
     @ApplicationContext private val context: Context,
     private val pool: WebViewPool,
     private val requestBlocker: RequestBlocker,
+    private val blockStatsRepository: BlockStatsRepository,
     private val blocklistRepository: BlocklistRepository,
     private val contentScriptInjector: ContentScriptInjector,
     private val mediaResolver: MediaResolver,
@@ -193,6 +195,7 @@ class BrowserEngine @Inject constructor(
         webView.webViewClient = RutaWebViewClient(
             tabId = tab.id,
             requestBlocker = requestBlocker,
+            onBlocked = blockStatsRepository::record,
             onStarted = { url, _ ->
                 // A deferred popup's first URL decides external-vs-in-app; if it was handed to the
                 // system browser, skip the rest (the WebView is being torn down).
