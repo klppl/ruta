@@ -50,15 +50,19 @@ class BlockStatsRepository @Inject constructor(
     private val _stats = MutableStateFlow(BlockStats())
     val stats: StateFlow<BlockStats> = _stats.asStateFlow()
 
+    // replay=1 so a record() that lands before observeFlushes() starts collecting still flushes.
     private val flushSignal = MutableSharedFlow<Unit>(
-        extraBufferCapacity = 1,
+        replay = 1,
         onBufferOverflow = BufferOverflow.DROP_OLDEST,
     )
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     init {
-        scope.launch { load() }
-        scope.launch { observeFlushes() }
+        // Load before collecting flushes so an early flush can't persist pre-merge counts.
+        scope.launch {
+            load()
+            observeFlushes()
+        }
     }
 
     /** Record one blocked request. Thread-safe; safe to call from the WebView worker thread. */
@@ -104,10 +108,11 @@ class BlockStatsRepository @Inject constructor(
         val storedDays = prefs[daysKey]?.let {
             runCatching { json.decodeFromString(daySerializer, it) }.getOrNull()
         } ?: emptyMap()
+        // Merge (don't overwrite): record() may already have counted blocks in-memory while
+        // this initial read was in flight; those deltas must survive the load.
         synchronized(lock) {
-            total = storedTotal
-            days.clear()
-            days.putAll(storedDays)
+            total += storedTotal
+            for ((day, count) in storedDays) days[day] = (days[day] ?: 0) + count
             pruneOld(epochDay())
         }
         emit()

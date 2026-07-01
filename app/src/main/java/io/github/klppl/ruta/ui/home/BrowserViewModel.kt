@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.webkit.URLUtil
+import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.klppl.ruta.browser.BrowserEngine
@@ -71,6 +72,9 @@ class BrowserViewModel @Inject constructor(
 
     private val _selectedProfileId = MutableStateFlow(Tab.DEFAULT_PROFILE_ID)
     val selectedProfileId: StateFlow<String> = _selectedProfileId.asStateFlow()
+
+    // Timestamp of the last "press back again to exit" warning (see onBack).
+    private var lastExitBackAt = 0L
 
     val settings = settingsRepository.settings
         .stateIn(viewModelScope, SharingStarted.Eagerly, io.github.klppl.ruta.data.settings.AppSettings())
@@ -210,11 +214,25 @@ class BrowserViewModel @Inject constructor(
 
     /** @return true if the back press was consumed; false means the host may exit. */
     fun onBack(): Boolean {
-        val id = _activeId.value ?: return false
+        if (consumeBack()) return true
+        // Nothing left to consume — the app would background. With double-back enabled the
+        // first press only warns; a second within the window falls through to the host.
+        if (!settings.value.doubleBackToExit) return false
+        val now = System.currentTimeMillis()
+        if (now - lastExitBackAt <= EXIT_CONFIRM_WINDOW_MS) return false
+        lastExitBackAt = now
+        Toast.makeText(appContext, "Press back again to exit", Toast.LENGTH_SHORT).show()
+        return true
+    }
+
+    private fun consumeBack(): Boolean {
+        // The switcher can be open with no active tab (from the dashboard), so close it before
+        // the active-tab check.
         if (_showTabSwitcher.value) {
             _showTabSwitcher.value = false
             return true
         }
+        val id = _activeId.value ?: return false
         if (engine.canGoBack(id)) {
             engine.goBack(id)
             return true
@@ -292,6 +310,17 @@ class BrowserViewModel @Inject constructor(
             Profile.siteId(service.host)
         } else {
             _selectedProfileId.value
+        }
+        // Already open on this profile (e.g. a dock tab restored at launch)? Switch to it
+        // instead of minting a duplicate — the dashboard is the entry point on every launch.
+        val existing = _tabs.value.firstOrNull { tab ->
+            !tab.isNewTab && tab.profileId == profileId && hostMatches(tab.url, service.host)
+        }
+        if (existing != null) {
+            _activeId.value = existing.id
+            _showTabSwitcher.value = false
+            _dockVisible.value = true
+            return
         }
         val active = activeTab.value
         if (active != null && active.isNewTab) {
@@ -475,6 +504,12 @@ class BrowserViewModel @Inject constructor(
 
     private fun newId(): String = "tab:" + UUID.randomUUID().toString().take(8)
 
+    /** True if [url]'s host is [serviceHost] or a subdomain of it. */
+    private fun hostMatches(url: String, serviceHost: String): Boolean {
+        val host = Hosts.hostOf(url) ?: return false
+        return host == serviceHost || host.endsWith(".$serviceHost")
+    }
+
     private fun toUrlOrSearch(raw: String): String {
         val input = raw.trim()
         if (input.isEmpty()) return input
@@ -482,9 +517,14 @@ class BrowserViewModel @Inject constructor(
         val looksLikeHost = !input.contains(' ') && input.contains('.') &&
             !input.endsWith(".")
         return if (looksLikeHost) {
-            if (input.startsWith("http")) input else "https://$input"
+            if (input.startsWith("http://") || input.startsWith("https://")) input else "https://$input"
         } else {
             "https://duckduckgo.com/?q=" + android.net.Uri.encode(input)
         }
+    }
+
+    private companion object {
+        // Second back press within this window actually exits (see onBack).
+        const val EXIT_CONFIRM_WINDOW_MS = 2000L
     }
 }
