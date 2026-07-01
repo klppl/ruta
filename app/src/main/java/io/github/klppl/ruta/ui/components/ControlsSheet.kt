@@ -14,6 +14,7 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.DesktopWindows
 import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.FindInPage
 import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Settings
@@ -40,6 +41,7 @@ fun ControlsSheet(
     onCopyLink: () -> Unit,
     onToggleDesktop: () -> Unit,
     onDownloadMedia: () -> Unit,
+    onFindInPage: () -> Unit,
     onToggleAdBlock: (Boolean) -> Unit,
     onShowTabs: () -> Unit,
     onOpenSettings: () -> Unit,
@@ -77,6 +79,7 @@ fun ControlsSheet(
             checked = adBlockEnabled,
             onCheckedChange = onToggleAdBlock,
         )
+        if (host != null) LinkRow(Icons.Rounded.FindInPage, "Find in page", onFindInPage)
         LinkRow(Icons.Rounded.GridView, "All tabs", onShowTabs)
         LinkRow(Icons.Rounded.Settings, "Settings", onOpenSettings)
     }

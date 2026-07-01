@@ -40,6 +40,9 @@ import kotlinx.coroutines.launch
 import java.util.UUID
 import javax.inject.Inject
 
+/** Find-in-page session: [current] is 1-based among [total] matches (0/0 = no matches yet). */
+data class FindState(val query: String = "", val current: Int = 0, val total: Int = 0)
+
 @OptIn(FlowPreview::class)
 @HiltViewModel
 class BrowserViewModel @Inject constructor(
@@ -75,6 +78,14 @@ class BrowserViewModel @Inject constructor(
 
     // Timestamp of the last "press back again to exit" warning (see onBack).
     private var lastExitBackAt = 0L
+
+    private val _findState = MutableStateFlow<FindState?>(null)
+    /** Non-null while the find-in-page bar is open on the active tab. */
+    val findState: StateFlow<FindState?> = _findState.asStateFlow()
+
+    // Whether each tab's dominant scroller is at its top (content-script reported); used to
+    // decide when a downward drag should be a pull-to-refresh rather than an inner-feed scroll.
+    private val pageAtTop = HashMap<String, Boolean>()
 
     val settings = settingsRepository.settings
         .stateIn(viewModelScope, SharingStarted.Eagerly, io.github.klppl.ruta.data.settings.AppSettings())
@@ -171,6 +182,7 @@ class BrowserViewModel @Inject constructor(
      * first, rather than being dropped back into the last page they viewed.
      */
     fun showDashboard() {
+        closeFind()
         _activeId.value = null
         _showTabSwitcher.value = false
         _dockVisible.value = true
@@ -187,6 +199,7 @@ class BrowserViewModel @Inject constructor(
     }
 
     fun selectTab(id: String) {
+        if (id != _activeId.value) closeFind()
         _activeId.value = id
         _showTabSwitcher.value = false
         _dockVisible.value = true
@@ -204,6 +217,8 @@ class BrowserViewModel @Inject constructor(
 
     fun closeTab(id: String) {
         engine.destroyTab(id)
+        pageAtTop.remove(id)
+        if (_activeId.value == id) closeFind()
         val remaining = _tabs.value.filterNot { it.id == id }
         _tabs.value = remaining
         if (_activeId.value == id) {
@@ -372,6 +387,30 @@ class BrowserViewModel @Inject constructor(
 
     fun downloadMedia() = _activeId.value?.let(engine::requestMediaDownload)
 
+    // --------------------------------------------------------- find in page ---
+
+    fun startFind() {
+        if (_activeId.value == null) return
+        _findState.value = FindState()
+    }
+
+    fun updateFindQuery(query: String) {
+        val state = _findState.value ?: return
+        _findState.value = state.copy(query = query, current = 0, total = 0)
+        _activeId.value?.let { engine.findInPage(it, query) }
+    }
+
+    fun findNext(forward: Boolean) = _activeId.value?.let { engine.findNext(it, forward) }
+
+    fun closeFind() {
+        if (_findState.value == null) return
+        _activeId.value?.let(engine::clearFind)
+        _findState.value = null
+    }
+
+    /** True while the page's main scroller sits at its top (pull-to-refresh may engage). */
+    fun isPageAtTop(tabId: String): Boolean = pageAtTop[tabId] != false
+
     fun setAdBlockEnabled(enabled: Boolean) {
         viewModelScope.launch { settingsRepository.setAdBlock(enabled) }
     }
@@ -479,6 +518,19 @@ class BrowserViewModel @Inject constructor(
 
     override fun onChromeVisibility(visible: Boolean) {
         _dockVisible.value = visible
+    }
+
+    override fun onFindResult(tabId: String, activeMatch: Int, matches: Int) {
+        if (tabId != _activeId.value) return
+        val state = _findState.value ?: return
+        _findState.value = state.copy(
+            current = if (matches == 0) 0 else activeMatch + 1,
+            total = matches,
+        )
+    }
+
+    override fun onPageAtTop(tabId: String, atTop: Boolean) {
+        pageAtTop[tabId] = atTop
     }
 
     override fun onContextTarget(target: ContextTarget) {

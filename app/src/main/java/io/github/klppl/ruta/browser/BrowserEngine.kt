@@ -146,6 +146,21 @@ class BrowserEngine @Inject constructor(
         contentScriptInjector.requestMedia(webView)
     }
 
+    // ------------------------------------------------------------ find in page ---
+
+    fun findInPage(tabId: String, query: String) {
+        val webView = pool.get(tabId) ?: return
+        if (query.isEmpty()) webView.clearMatches() else webView.findAllAsync(query)
+    }
+
+    fun findNext(tabId: String, forward: Boolean) {
+        pool.get(tabId)?.findNext(forward)
+    }
+
+    fun clearFind(tabId: String) {
+        pool.get(tabId)?.clearMatches()
+    }
+
     @SuppressLint("SetJavaScriptEnabled")
     private fun createWebView(tab: Tab, events: TabEvents): WebView {
         val forceDark = currentSettings.forceDarkWebsites
@@ -226,6 +241,9 @@ class BrowserEngine @Inject constructor(
 
         webView.setDownloadListener { url, _, _, _, _ ->
             mediaResolver.downloadUrl(url, webView.url, desktopByTab[tab.id] == true)
+        }
+        webView.setFindListener { activeMatch, matches, isDone ->
+            if (isDone) events.onFindResult(tab.id, activeMatch, matches)
         }
         // Dock collapse/reveal is driven by the page script's scroll detection (it catches
         // single-page-app inner scrollers that the native scroll listener misses).

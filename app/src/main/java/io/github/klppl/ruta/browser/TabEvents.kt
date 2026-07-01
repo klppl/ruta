@@ -14,4 +14,8 @@ interface TabEvents {
     fun onContextTarget(target: ContextTarget)
     /** Page scrolled: false = scrolling down (collapse the dock), true = up/at top (reveal). */
     fun onChromeVisibility(visible: Boolean)
+    /** Find-in-page match state: [activeMatch] is 0-based, [matches] the total (0 = none). */
+    fun onFindResult(tabId: String, activeMatch: Int, matches: Int)
+    /** Whether the page's dominant scroller is at (or near) its top — gates pull-to-refresh. */
+    fun onPageAtTop(tabId: String, atTop: Boolean)
 }

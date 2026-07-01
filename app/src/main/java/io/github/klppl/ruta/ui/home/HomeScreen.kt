@@ -71,6 +71,7 @@ fun HomeScreen(
     val dashboardServices by viewModel.dashboardServices.collectAsStateWithLifecycle()
     val addableServices by viewModel.addableServices.collectAsStateWithLifecycle()
     val blockStats by viewModel.blockStats.collectAsStateWithLifecycle()
+    val findState by viewModel.findState.collectAsStateWithLifecycle()
     val dockTabs = remember(tabs) { tabs.filterNot { it.isNewTab } }
 
     var showControls by remember { mutableStateOf(false) }
@@ -83,6 +84,7 @@ fun HomeScreen(
     BackHandler(enabled = true) {
         if (dockEditMode) dockEditMode = false
         else if (editingUrl) editingUrl = false
+        else if (findState != null) viewModel.closeFind()
         else if (!viewModel.onBack()) onExit()
     }
 
@@ -107,9 +109,19 @@ fun HomeScreen(
                 }
             }
 
+            findState?.let { find ->
+                FindBar(
+                    state = find,
+                    onQueryChange = viewModel::updateFindQuery,
+                    onNext = viewModel::findNext,
+                    onClose = viewModel::closeFind,
+                    modifier = if (topBar) Modifier else Modifier.statusBarsPadding(),
+                )
+            }
+
             // Content sits between the bars (never behind them).
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                val contentModifier = if (topBar) Modifier else Modifier.statusBarsPadding()
+                val contentModifier = if (topBar || findState != null) Modifier else Modifier.statusBarsPadding()
                 if (current == null || current.isNewTab) {
                     ServiceLauncher(
                         profiles = profiles,
@@ -235,6 +247,7 @@ fun HomeScreen(
                 onCopyLink = { showControls = false; viewModel.copyCurrentUrl() },
                 onToggleDesktop = { showControls = false; viewModel.toggleDesktopMode() },
                 onDownloadMedia = { showControls = false; viewModel.downloadMedia() },
+                onFindInPage = { showControls = false; viewModel.startFind() },
                 onToggleAdBlock = viewModel::setAdBlockEnabled,
                 onShowTabs = { showControls = false; viewModel.setShowTabSwitcher(true) },
                 onOpenSettings = { showControls = false; onOpenSettings() },
