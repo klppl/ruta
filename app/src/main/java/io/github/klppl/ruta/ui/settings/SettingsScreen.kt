@@ -1,5 +1,7 @@
 package io.github.klppl.ruta.ui.settings
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -279,6 +281,26 @@ fun SettingsScreen(
                 singleLine = true,
             )
             TextButton(onClick = { viewModel.setProxyUrl(proxyDraft) }) { Text("Save proxy") }
+
+            Section("Backup")
+            Text(
+                "Sites, dashboard order, filter lists and settings. Logins and cookies can't be " +
+                    "exported — you'll sign in again after a restore.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            val exportLauncher = rememberLauncherForActivityResult(
+                ActivityResultContracts.CreateDocument("application/json"),
+            ) { uri -> uri?.let(viewModel::exportSettings) }
+            val importLauncher = rememberLauncherForActivityResult(
+                ActivityResultContracts.OpenDocument(),
+            ) { uri -> uri?.let(viewModel::importSettings) }
+            Row {
+                TextButton(onClick = { exportLauncher.launch("ruta-backup.json") }) { Text("Export…") }
+                TextButton(onClick = {
+                    importLauncher.launch(arrayOf("application/json", "text/plain", "application/octet-stream"))
+                }) { Text("Import…") }
+            }
 
             Section("About")
             TextButton(onClick = onOpenAbout) { Text("Licenses & attribution") }

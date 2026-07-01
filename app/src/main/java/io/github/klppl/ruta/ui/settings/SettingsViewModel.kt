@@ -1,9 +1,11 @@
 package io.github.klppl.ruta.ui.settings
 
 import android.content.Context
+import android.net.Uri
 import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.github.klppl.ruta.data.backup.BackupManager
 import io.github.klppl.ruta.blocking.BlocklistRepository
 import io.github.klppl.ruta.blocking.FilterListEntry
 import io.github.klppl.ruta.blocking.FilterListRepository
@@ -34,6 +36,7 @@ class SettingsViewModel @Inject constructor(
     private val profileManager: ProfileManager,
     private val filterListRepository: FilterListRepository,
     private val linkHandling: LinkHandling,
+    private val backupManager: BackupManager,
     blocklistRepository: BlocklistRepository,
 ) : ViewModel() {
 
@@ -102,8 +105,18 @@ class SettingsViewModel @Inject constructor(
     /** Wipes cookies + web storage for [id] ("log out of everything" for that profile). */
     fun clearProfileData(id: String) {
         profileManager.wipe(id)
-        Toast.makeText(appContext, "Data cleared — open sites sign out on reload", Toast.LENGTH_SHORT).show()
+        toast("Data cleared — open sites sign out on reload")
     }
+
+    fun exportSettings(uri: Uri) = launch {
+        toast(if (backupManager.exportTo(uri)) "Backup saved" else "Export failed")
+    }
+
+    fun importSettings(uri: Uri) = launch {
+        toast(if (backupManager.importFrom(uri)) "Backup restored" else "Import failed — not a ruta backup?")
+    }
+
+    private fun toast(msg: String) = Toast.makeText(appContext, msg, Toast.LENGTH_SHORT).show()
 
     private fun launch(block: suspend () -> Unit) {
         viewModelScope.launch { block() }
