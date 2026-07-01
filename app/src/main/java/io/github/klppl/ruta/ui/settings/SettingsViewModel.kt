@@ -86,6 +86,7 @@ class SettingsViewModel @Inject constructor(
     fun setCosmetic(v: Boolean) = launch { settingsRepository.setCosmetic(v) }
     fun setStripParams(v: Boolean) = launch { settingsRepository.setStripParams(v) }
     fun setDoubleBack(v: Boolean) = launch { settingsRepository.setDoubleBack(v) }
+    fun setPullToRefresh(v: Boolean) = launch { settingsRepository.setPullToRefresh(v) }
     fun setOpenLinksExternally(v: Boolean) = launch { settingsRepository.setOpenLinksExternally(v) }
     fun setPerSiteProfile(v: Boolean) = launch { settingsRepository.setPerSiteProfile(v) }
     fun setProxyEnabled(v: Boolean) = launch { settingsRepository.setProxyEnabled(v) }

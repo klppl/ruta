@@ -26,6 +26,7 @@ class SettingsRepository @Inject constructor(
         val cosmetic = booleanPreferencesKey("cosmetic")
         val stripParams = booleanPreferencesKey("strip_params")
         val doubleBack = booleanPreferencesKey("double_back")
+        val pullToRefresh = booleanPreferencesKey("pull_to_refresh")
         val openLinksExternal = booleanPreferencesKey("open_links_external")
         val perSiteProfile = booleanPreferencesKey("per_site_profile")
         val proxyEnabled = booleanPreferencesKey("proxy_enabled")
@@ -45,6 +46,7 @@ class SettingsRepository @Inject constructor(
             cosmeticFilteringEnabled = p[Keys.cosmetic] ?: true,
             stripTrackingParams = p[Keys.stripParams] ?: true,
             doubleBackToExit = p[Keys.doubleBack] ?: true,
+            pullToRefresh = p[Keys.pullToRefresh] ?: true,
             openLinksExternally = p[Keys.openLinksExternal] ?: true,
             separateProfilePerSite = p[Keys.perSiteProfile] ?: false,
             proxyEnabled = p[Keys.proxyEnabled] ?: false,
@@ -62,6 +64,7 @@ class SettingsRepository @Inject constructor(
     suspend fun setCosmetic(value: Boolean) = edit { it[Keys.cosmetic] = value }
     suspend fun setStripParams(value: Boolean) = edit { it[Keys.stripParams] = value }
     suspend fun setDoubleBack(value: Boolean) = edit { it[Keys.doubleBack] = value }
+    suspend fun setPullToRefresh(value: Boolean) = edit { it[Keys.pullToRefresh] = value }
     suspend fun setOpenLinksExternally(value: Boolean) = edit { it[Keys.openLinksExternal] = value }
     suspend fun setPerSiteProfile(value: Boolean) = edit { it[Keys.perSiteProfile] = value }
     suspend fun setProxyEnabled(value: Boolean) = edit { it[Keys.proxyEnabled] = value }

@@ -216,6 +216,7 @@ class BrowserEngine @Inject constructor(
                 // system browser, skip the rest (the WebView is being torn down).
                 if (!handlePopupFirstUrl(tab.id, url, events)) {
                     events.onProgress(tab.id, 5)
+                    events.onPageAtTop(tab.id, true) // full loads land at the top
                     if (contentScriptInjector.needsManualInjection) {
                         contentScriptInjector.injectManually(webView, contentConfig())
                     }
@@ -399,7 +400,12 @@ class BrowserEngine @Inject constructor(
                 pushCustomCss(webView)
             }
             "media" -> mediaResolver.onMediaMessage(data, webView.url, desktopByTab[tabId] == true)
-            "scroll" -> events.onChromeVisibility(data?.optBoolean("visible", true) ?: true)
+            "scroll" -> {
+                events.onChromeVisibility(data?.optBoolean("visible", true) ?: true)
+                if (data != null && data.has("top")) {
+                    events.onPageAtTop(tabId, data.optBoolean("top", true))
+                }
+            }
             "context" -> {
                 if (data == null) return
                 val target = ContextTarget(

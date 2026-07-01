@@ -142,7 +142,14 @@ fun HomeScreen(
                     val webView = remember(current.id, settings.forceDarkWebsites) {
                         viewModel.engine.getOrCreateWebView(current, viewModel)
                     }
-                    WebViewHost(webView = webView, modifier = Modifier.fillMaxSize().then(contentModifier))
+                    WebViewHost(
+                        webView = webView,
+                        loading = current.progress in 1..99,
+                        pullToRefreshEnabled = settings.pullToRefresh,
+                        pageAtTop = { viewModel.isPageAtTop(current.id) },
+                        onRefresh = { viewModel.reloadActive() },
+                        modifier = Modifier.fillMaxSize().then(contentModifier),
+                    )
                 }
             }
 

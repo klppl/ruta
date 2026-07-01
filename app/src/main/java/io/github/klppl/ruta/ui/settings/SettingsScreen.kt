@@ -197,6 +197,7 @@ fun SettingsScreen(
             TextButton(onClick = { showAddFilterList = true }) { Text("+ Add filter list") }
 
             Section("Browsing")
+            SettingSwitch("Pull down to refresh", settings.pullToRefresh, viewModel::setPullToRefresh)
             SettingSwitch("Open external links in your browser", settings.openLinksExternally, viewModel::setOpenLinksExternally)
             SettingSwitch("Separate profile per site", settings.separateProfilePerSite, viewModel::setPerSiteProfile)
             SettingSwitch("Double-tap back to exit", settings.doubleBackToExit, viewModel::setDoubleBack)

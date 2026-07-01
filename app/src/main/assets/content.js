@@ -486,10 +486,19 @@
     var tops = new WeakMap();
     var accum = 0;
     var chromeVisible = true;
+    var atTop = true;
     function setChrome(v) {
       if (v !== chromeVisible) {
         chromeVisible = v;
-        post("scroll", { visible: v });
+        post("scroll", { visible: v, top: atTop });
+      }
+    }
+    // Report whether the dominant (most recently scrolled) scroller sits at its top, so the
+    // native side knows when a downward drag means pull-to-refresh rather than feed scrolling.
+    function setTop(v) {
+      if (v !== atTop) {
+        atTop = v;
+        post("scroll", { visible: chromeVisible, top: v });
       }
     }
     function onScroll(e) {
@@ -506,6 +515,7 @@
       }
       // Ignore elements that aren't really scrollable (avoids fixed bars firing spurious events).
       if (scrollable < 80) return;
+      setTop(y <= 6);
       var key = isDoc ? document : t;
       var prev = tops.has(key) ? tops.get(key) : y;
       tops.set(key, y);

@@ -97,6 +97,8 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
 
     implementation(libs.androidx.webkit)
+    implementation(libs.androidx.swiperefreshlayout)
+    implementation(libs.androidx.biometric)
 
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)

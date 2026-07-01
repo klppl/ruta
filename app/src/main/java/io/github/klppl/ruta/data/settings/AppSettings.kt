@@ -13,6 +13,7 @@ data class AppSettings(
     val cosmeticFilteringEnabled: Boolean = true,
     val stripTrackingParams: Boolean = true,
     val doubleBackToExit: Boolean = true,
+    val pullToRefresh: Boolean = true,
     val openLinksExternally: Boolean = true,
     val separateProfilePerSite: Boolean = false,
     val proxyEnabled: Boolean = false,
