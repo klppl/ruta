@@ -60,8 +60,10 @@ class ContentScriptInjector @Inject constructor(
                 webView,
                 "rutaNative",
                 allowedOrigins,
-            ) { _: WebView, message: WebMessageCompat, _: Uri, _: Boolean, _: JavaScriptReplyProxy ->
-                dispatch(message.data, listener)
+            ) { _: WebView, message: WebMessageCompat, _: Uri, isMainFrame: Boolean, _: JavaScriptReplyProxy ->
+                // Only the top document may talk to us: a third-party iframe could otherwise
+                // spoof media/context messages (e.g. trigger a bogus download).
+                if (isMainFrame) dispatch(message.data, listener)
             }
         } else {
             webView.addJavascriptInterface(ClassicBridge(listener), "rutaBridge")

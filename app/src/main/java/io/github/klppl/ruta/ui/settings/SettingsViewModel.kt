@@ -93,6 +93,7 @@ class SettingsViewModel @Inject constructor(
     fun setAdBlock(v: Boolean) = launch { settingsRepository.setAdBlock(v) }
     fun setCosmetic(v: Boolean) = launch { settingsRepository.setCosmetic(v) }
     fun setStripParams(v: Boolean) = launch { settingsRepository.setStripParams(v) }
+    fun setThirdPartyCookies(v: Boolean) = launch { settingsRepository.setThirdPartyCookies(v) }
     fun setDoubleBack(v: Boolean) = launch { settingsRepository.setDoubleBack(v) }
     fun setPullToRefresh(v: Boolean) = launch { settingsRepository.setPullToRefresh(v) }
     fun setOpenLinksExternally(v: Boolean) = launch { settingsRepository.setOpenLinksExternally(v) }

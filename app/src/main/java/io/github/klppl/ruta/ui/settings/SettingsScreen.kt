@@ -142,6 +142,13 @@ fun SettingsScreen(
             SettingSwitch("Block ads & trackers", settings.adBlockEnabled, viewModel::setAdBlock)
             SettingSwitch("Cosmetic filtering (hide elements)", settings.cosmeticFilteringEnabled, viewModel::setCosmetic)
             SettingSwitch("Strip tracking params on copy", settings.stripTrackingParams, viewModel::setStripParams)
+            SettingSwitch("Allow third-party cookies", settings.thirdPartyCookies, viewModel::setThirdPartyCookies)
+            Text(
+                "Off by default. Turn on only if an embedded sign-in inside a site refuses to " +
+                    "work. Open sites pick it up on their next reload.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             Row(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,

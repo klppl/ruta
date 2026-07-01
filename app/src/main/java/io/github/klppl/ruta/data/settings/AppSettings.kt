@@ -12,6 +12,7 @@ data class AppSettings(
     val adBlockEnabled: Boolean = true,
     val cosmeticFilteringEnabled: Boolean = true,
     val stripTrackingParams: Boolean = true,
+    val thirdPartyCookies: Boolean = false,
     val doubleBackToExit: Boolean = true,
     val pullToRefresh: Boolean = true,
     val openLinksExternally: Boolean = true,

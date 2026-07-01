@@ -256,7 +256,8 @@ class BrowserEngine @Inject constructor(
             setSupportZoom(true)
             allowFileAccess = false
             allowContentAccess = false
-            mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
+            // The wrapped sites are HTTPS-clean; never downgrade a secure page with http subresources.
+            mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_NEVER_ALLOW
             userAgentString = userAgentProvider.forMode(tab.desktopMode)
         }
 
@@ -268,7 +269,9 @@ class BrowserEngine @Inject constructor(
         applyForceDark(webView, forceDark)
 
         CookieManager.getInstance().setAcceptCookie(true)
-        CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true)
+        // Privacy default: no third-party cookies unless the user opted in (some embedded
+        // sign-in flows need them). Applies per WebView, so it takes effect on recreation.
+        CookieManager.getInstance().setAcceptThirdPartyCookies(webView, currentSettings.thirdPartyCookies)
 
         contentScriptInjector.install(webView, contentConfig()) { type, data ->
             main.post { handlePageMessage(tab.id, type, data, events) }
