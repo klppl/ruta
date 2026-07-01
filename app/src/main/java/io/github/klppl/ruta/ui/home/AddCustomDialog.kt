@@ -24,16 +24,20 @@ import androidx.compose.ui.unit.dp
 fun AddCustomDialog(
     onAdd: (name: String, url: String) -> Unit,
     onDismiss: () -> Unit,
+    title: String = "Add custom site",
+    confirmLabel: String = "Add",
+    initialName: String = "",
+    initialUrl: String = "https://",
 ) {
     var url by remember {
-        mutableStateOf(TextFieldValue("https://", selection = TextRange("https://".length)))
+        mutableStateOf(TextFieldValue(initialUrl, selection = TextRange(initialUrl.length)))
     }
-    var name by remember { mutableStateOf("") }
+    var name by remember { mutableStateOf(initialName) }
     val hostPart = url.text.trim().removePrefix("https://").removePrefix("http://")
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add custom site") },
+        title = { Text(title) },
         text = {
             Column {
                 OutlinedTextField(
@@ -58,7 +62,7 @@ fun AddCustomDialog(
             TextButton(
                 onClick = { onAdd(name, url.text) },
                 enabled = hostPart.isNotBlank(),
-            ) { Text("Add") }
+            ) { Text(confirmLabel) }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )

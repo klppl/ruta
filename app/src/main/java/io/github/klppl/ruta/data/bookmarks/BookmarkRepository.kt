@@ -32,14 +32,33 @@ class BookmarkRepository @Inject constructor(
         decode(prefs[key]).map { it.toService() }
     }
 
-    /** Adds a custom site. Returns false if the URL can't be parsed into a host. */
-    suspend fun add(name: String, rawUrl: String): Boolean {
+    /**
+     * Adds a custom site and returns its service id (`bookmark:<id>`) so the caller can place
+     * it in the dashboard order; null if the URL can't be parsed into a host.
+     */
+    suspend fun add(name: String, rawUrl: String): String? {
+        val url = ensureScheme(rawUrl.trim())
+        val host = Hosts.hostOf(url) ?: return null
+        val displayName = name.trim().ifBlank { host.removePrefix("www.") }
+        val id = UUID.randomUUID().toString().take(8)
+        dataStore.edit { prefs ->
+            val current = decode(prefs[key]).toMutableList()
+            current.add(StoredBookmark(id, displayName, url, host))
+            prefs[key] = json.encodeToString(serializer, current)
+        }
+        return "bookmark:$id"
+    }
+
+    /** Renames and/or re-points an existing custom site. Returns false on an unparseable URL. */
+    suspend fun update(id: String, name: String, rawUrl: String): Boolean {
+        val storedId = id.removePrefix("bookmark:")
         val url = ensureScheme(rawUrl.trim())
         val host = Hosts.hostOf(url) ?: return false
         val displayName = name.trim().ifBlank { host.removePrefix("www.") }
         dataStore.edit { prefs ->
-            val current = decode(prefs[key]).toMutableList()
-            current.add(StoredBookmark(UUID.randomUUID().toString().take(8), displayName, url, host))
+            val current = decode(prefs[key]).map {
+                if (it.id == storedId) StoredBookmark(it.id, displayName, url, host) else it
+            }
             prefs[key] = json.encodeToString(serializer, current)
         }
         return true

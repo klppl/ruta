@@ -79,10 +79,13 @@ fun HomeScreen(
     var showAddCustom by remember { mutableStateOf(false) }
     var showAddSheet by remember { mutableStateOf(false) }
     var bookmarkToRemove by remember { mutableStateOf<AppService?>(null) }
+    var bookmarkToEdit by remember { mutableStateOf<AppService?>(null) }
     var dockEditMode by remember { mutableStateOf(false) }
+    var gridEditMode by remember { mutableStateOf(false) }
 
     BackHandler(enabled = true) {
         if (dockEditMode) dockEditMode = false
+        else if (gridEditMode) gridEditMode = false
         else if (editingUrl) editingUrl = false
         else if (findState != null) viewModel.closeFind()
         else if (!viewModel.onBack()) onExit()
@@ -128,12 +131,17 @@ fun HomeScreen(
                         selectedProfileId = selectedProfile,
                         onSelectProfile = viewModel::setSelectedProfile,
                         onAddProfile = { viewModel.createProfile("Account ${profiles.size}") },
-                        onOpenService = viewModel::openService,
+                        onOpenService = { gridEditMode = false; viewModel.openService(it) },
                         onSearch = { editingUrl = true },
                         dashboardServices = dashboardServices,
                         stats = blockStats,
                         rulesLoaded = blockStatus.networkRules,
+                        editMode = gridEditMode,
+                        onEnterEdit = { gridEditMode = true },
+                        onExitEdit = { gridEditMode = false },
+                        onCommitOrder = viewModel::saveDashboardOrder,
                         onRemoveService = { bookmarkToRemove = it },
+                        onEditService = { bookmarkToEdit = it },
                         onAddCustom = { showAddCustom = true },
                         onOpenCatalog = { showAddSheet = true },
                         modifier = contentModifier,
@@ -301,6 +309,20 @@ fun HomeScreen(
                 showAddCustom = false
             },
             onDismiss = { showAddCustom = false },
+        )
+    }
+
+    bookmarkToEdit?.let { editing ->
+        AddCustomDialog(
+            title = "Edit site",
+            confirmLabel = "Save",
+            initialName = editing.name,
+            initialUrl = editing.url,
+            onAdd = { name, url ->
+                viewModel.updateBookmark(editing.id, name, url)
+                bookmarkToEdit = null
+            },
+            onDismiss = { bookmarkToEdit = null },
         )
     }
 

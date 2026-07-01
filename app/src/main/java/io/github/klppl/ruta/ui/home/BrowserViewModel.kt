@@ -101,13 +101,18 @@ class BrowserViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     /**
-     * The sites shown on the launcher: the built-ins the user has pinned (in pin order) followed
-     * by their custom sites. Built-ins the user hasn't used yet stay in the "+" catalog. When this
-     * is empty the launcher falls back to showing [Services.all] as suggestions.
+     * The sites shown on the launcher in the user's saved order (built-ins and custom sites
+     * interleaved). Built-ins the user hasn't used yet stay in the "+" catalog; bookmarks not yet
+     * in the order list (pre-dating it) are appended at the end. When this is empty the launcher
+     * falls back to showing [Services.all] as suggestions.
      */
     val dashboardServices: StateFlow<List<AppService>> =
         combine(pinnedIds, customServices) { ids, customs ->
-            ids.mapNotNull { id -> Services.all.firstOrNull { it.id == id } } + customs
+            val byId = HashMap<String, AppService>().apply {
+                Services.all.forEach { put(it.id, it) }
+                customs.forEach { put(it.id, it) }
+            }
+            ids.mapNotNull(byId::get) + customs.filterNot { it.id in ids }
         }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     /** Built-in services not yet on the dashboard — the contents of the "+" add-site picker. */
@@ -116,11 +121,26 @@ class BrowserViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.Eagerly, Services.all)
 
     fun addBookmark(name: String, url: String) {
-        viewModelScope.launch { bookmarkRepository.add(name, url) }
+        viewModelScope.launch {
+            // Place the new site at the end of the saved dashboard order.
+            bookmarkRepository.add(name, url)?.let { pinnedServicesRepository.pin(it) }
+        }
+    }
+
+    fun updateBookmark(id: String, name: String, url: String) {
+        viewModelScope.launch { bookmarkRepository.update(id, name, url) }
     }
 
     fun removeBookmark(id: String) {
-        viewModelScope.launch { bookmarkRepository.remove(id) }
+        viewModelScope.launch {
+            bookmarkRepository.remove(id)
+            pinnedServicesRepository.unpin(id)
+        }
+    }
+
+    /** Persists a completed drag-reorder of the launcher grid. */
+    fun saveDashboardOrder(ids: List<String>) {
+        viewModelScope.launch { pinnedServicesRepository.setOrder(ids) }
     }
 
     /** Remove a site from the dashboard: delete a custom bookmark, or un-pin a built-in. */

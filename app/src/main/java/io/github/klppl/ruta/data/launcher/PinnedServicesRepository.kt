@@ -13,10 +13,12 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * The built-in services the user has chosen to keep on their dashboard, in display order. A
- * service is pinned the first time it's opened, so the launcher shows the sites you actually use
- * rather than the full catalog; the rest stay one tap away behind the "+" picker. Custom sites
- * live in [io.github.klppl.ruta.data.bookmarks.BookmarkRepository]; this tracks only built-ins.
+ * The dashboard's display order: built-in service ids and custom-bookmark ids (`bookmark:*`),
+ * in the order the user arranged them. A built-in is pinned the first time it's opened, so the
+ * launcher shows the sites you actually use rather than the full catalog; the rest stay one tap
+ * away behind the "+" picker. Custom sites' data lives in
+ * [io.github.klppl.ruta.data.bookmarks.BookmarkRepository]; only their placement is tracked here
+ * (bookmarks predating the order list are appended at the end until the first reorder).
  */
 @Singleton
 class PinnedServicesRepository @Inject constructor(
@@ -34,6 +36,11 @@ class PinnedServicesRepository @Inject constructor(
             val current = decode(prefs[key])
             if (id !in current) prefs[key] = json.encodeToString(serializer, current + id)
         }
+    }
+
+    /** Replaces the saved order wholesale — the commit of a drag-reorder. */
+    suspend fun setOrder(ids: List<String>) {
+        dataStore.edit { prefs -> prefs[key] = json.encodeToString(serializer, ids) }
     }
 
     suspend fun unpin(id: String) {
