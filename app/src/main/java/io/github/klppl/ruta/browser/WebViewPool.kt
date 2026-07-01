@@ -26,6 +26,10 @@ class WebViewPool @Inject constructor() {
         webViews.remove(tabId)?.let(::destroy)
     }
 
+    fun ids(): List<String> = webViews.keys.toList()
+
+    fun all(): List<WebView> = webViews.values.toList()
+
     fun destroyAll() {
         webViews.values.forEach(::destroy)
         webViews.clear()

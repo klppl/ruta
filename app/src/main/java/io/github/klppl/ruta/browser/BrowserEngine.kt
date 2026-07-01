@@ -102,7 +102,11 @@ class BrowserEngine @Inject constructor(
         }
     }
 
+    // The tab whose WebView was last handed to the UI — spared by trimInactiveWebViews.
+    @Volatile private var lastActiveTabId: String? = null
+
     fun getOrCreateWebView(tab: Tab, events: TabEvents): WebView {
+        lastActiveTabId = tab.id
         val existing = pool.get(tab.id)
         if (existing != null) {
             if (darkByTab[tab.id] == currentSettings.forceDarkWebsites) return existing
@@ -147,6 +151,35 @@ class BrowserEngine @Inject constructor(
     fun requestMediaDownload(tabId: String) {
         val webView = pool.get(tabId) ?: return
         contentScriptInjector.requestMedia(webView)
+    }
+
+    // ---------------------------------------------------- app lifecycle / memory ---
+
+    /**
+     * Called when the app leaves the foreground: pause every pooled WebView and the (global)
+     * JS timers, so backgrounded feeds stop burning CPU. Symmetric with [onAppForegrounded].
+     */
+    fun onAppBackgrounded() {
+        val views = pool.all()
+        views.forEach { it.onPause() }
+        views.firstOrNull()?.pauseTimers() // pauseTimers is process-wide; any instance works
+    }
+
+    fun onAppForegrounded() {
+        val views = pool.all()
+        views.firstOrNull()?.resumeTimers()
+        views.forEach { it.onResume() }
+    }
+
+    /**
+     * Memory pressure: destroy every pooled WebView except the active tab's and any popup still
+     * waiting on its first navigation. Safe because tabs lazily recreate from their saved URL
+     * (page position within the site is lost, the session/login is not).
+     */
+    fun trimInactiveWebViews() {
+        pool.ids()
+            .filter { it != lastActiveTabId && it !in pendingPopups }
+            .forEach { destroyTab(it) }
     }
 
     /**

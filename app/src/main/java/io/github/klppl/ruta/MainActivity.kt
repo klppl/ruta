@@ -102,11 +102,15 @@ class MainActivity : FragmentActivity() {
 
     override fun onStart() {
         super.onStart()
+        // Wake the WebViews (and their process-wide JS timers) paused in onStop.
+        engine.onAppForegrounded()
         if (locked.value) promptUnlock()
     }
 
     override fun onStop() {
         super.onStop()
+        // Backgrounded: stop all page JS so docked feeds don't drain the battery.
+        engine.onAppBackgrounded()
         // Re-lock whenever the app leaves the foreground (the biometric prompt itself only
         // pauses the activity, so it doesn't retrigger this).
         if (appLockEnabled) locked.value = true
