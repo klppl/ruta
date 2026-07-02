@@ -7,9 +7,10 @@ Threads, LinkedIn, Tumblr and Mastodon — into a single clean Android app, with
 blocked. No separate apps, no clutter, no tracking.
 
 <p align="center">
-  <img src="screenshot.png" alt="ruta launcher — social service grid" width="270">
-  &nbsp;&nbsp;
-  <img src="screenshot2.png" alt="ruta wrapping Mastodon with the account dock" width="270">
+  <img src="screenshots/dashboard.png" alt="Dashboard — your sites in a grid, with trackers-blocked stats" width="196">
+  <img src="screenshots/site.png" alt="Mastodon open in ruta, with the account dock along the bottom" width="196">
+  <img src="screenshots/add-site.png" alt="The add-a-site sheet with the built-in service catalog" width="196">
+  <img src="screenshots/settings.png" alt="Settings — appearance, layout, privacy and blocking" width="196">
 </p>
 
 ## Features
