@@ -242,11 +242,11 @@ internal fun ServiceTile(
                         modifier = Modifier.size(34.dp),
                     )
                     // No bundled glyph (a custom site at an unknown host) -> the site's own icon,
-                    // centered and letterboxed rather than stretched across the whole tile.
+                    // filling most of the tile and letterboxed (never stretched or clipped).
                     service.host.isNotBlank() -> SiteFavicon(
                         host = service.host,
                         contentDescription = service.name,
-                        modifier = Modifier.fillMaxSize().padding(18.dp),
+                        modifier = Modifier.fillMaxSize().padding(12.dp),
                         fallback = { Monogram(service.monogram, onColor) },
                     )
                     else -> Monogram(service.monogram, onColor)

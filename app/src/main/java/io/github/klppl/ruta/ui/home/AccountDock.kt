@@ -153,7 +153,7 @@ private fun DockItem(
                     showFavicon -> SiteFavicon(
                         host = host!!,
                         contentDescription = host,
-                        modifier = Modifier.fillMaxSize().padding(9.dp),
+                        modifier = Modifier.fillMaxSize().padding(6.dp),
                         fallback = {
                             Icon(
                                 imageVector = Icons.Rounded.Public,
