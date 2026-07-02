@@ -14,12 +14,13 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Per-site control over whether ruta is offered as a handler for a wrapped site's links.
+ * Registers ruta as a handler for its wrapped sites' links and routes the user to Android's own
+ * per-domain "open by default" screen to manage them.
  *
  * Android can't register new `<data android:host>` filters at runtime, so each built-in site has a
- * static `<activity-alias>` in the manifest carrying its host filter. Toggling a site here just
- * enables/disables that alias via [PackageManager] — which is what makes the matching domain appear
- * or disappear under Settings → Apps → ruta → "Open by default → supported web addresses". (Custom
+ * static `<activity-alias>` in the manifest carrying its host filter. [ensureAllEnabled] enables
+ * every alias so all their domains show up under Settings → Apps → ruta → "Open by default →
+ * supported web addresses", which is where the user actually chooses what opens in ruta. (Custom
  * user-added sites can't take part: the manifest is fixed at build time.)
  */
 @Singleton
@@ -27,31 +28,26 @@ class LinkHandling @Inject constructor(
     @ApplicationContext private val context: Context,
 ) {
     /** Built-in services that have a manifest alias, in launcher order. */
-    val services: List<AppService> = Services.all.filterNot { it.isCustom }
+    private val services: List<AppService> = Services.all.filterNot { it.isCustom }
 
     private fun component(serviceId: String) =
         ComponentName(context.packageName, ALIAS_PREFIX + serviceId)
 
-    fun isEnabled(serviceId: String): Boolean =
-        when (context.packageManager.getComponentEnabledSetting(component(serviceId))) {
-            PackageManager.COMPONENT_ENABLED_STATE_DISABLED -> false
-            // DEFAULT honours the manifest's android:enabled=true; ENABLED is an explicit opt-in.
-            else -> true
+    /**
+     * Enable every site's link alias. A disabled alias drops its domain from Android's supported-
+     * web-addresses list entirely, so enabling them all is what lets the user manage every site
+     * from the system screen. Idempotent; doesn't override the user's per-domain "open by default"
+     * choices (those are a separate app-link preference, not the component's enabled state).
+     */
+    fun ensureAllEnabled() {
+        services.forEach { service ->
+            context.packageManager.setComponentEnabledSetting(
+                component(service.id),
+                PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+                PackageManager.DONT_KILL_APP,
+            )
         }
-
-    fun setEnabled(serviceId: String, enabled: Boolean) {
-        val state = if (enabled) {
-            PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-        } else {
-            PackageManager.COMPONENT_ENABLED_STATE_DISABLED
-        }
-        context.packageManager.setComponentEnabledSetting(
-            component(serviceId), state, PackageManager.DONT_KILL_APP,
-        )
     }
-
-    /** Snapshot of every built-in site's current handler state. */
-    fun snapshot(): Map<String, Boolean> = services.associate { it.id to isEnabled(it.id) }
 
     /** Open the system screen that hosts the per-domain "open by default" toggles. */
     fun openSystemSettings() {

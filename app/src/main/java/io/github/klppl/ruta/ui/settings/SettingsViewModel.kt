@@ -14,16 +14,13 @@ import io.github.klppl.ruta.data.settings.AppSettings
 import io.github.klppl.ruta.data.settings.SettingsRepository
 import io.github.klppl.ruta.data.styles.StyleRepository
 import io.github.klppl.ruta.links.LinkHandling
-import io.github.klppl.ruta.model.AppService
 import io.github.klppl.ruta.profile.Profile
 import io.github.klppl.ruta.profile.ProfileManager
 import io.github.klppl.ruta.ui.theme.ThemeMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -65,21 +62,10 @@ class SettingsViewModel @Inject constructor(
 
     private val blocklist = blocklistRepository
 
-    /** Built-in sites that can be registered as link handlers. */
-    val linkServices: List<AppService> = linkHandling.services
-
-    private val _linkHandlers = MutableStateFlow(linkHandling.snapshot())
-    /** Map of service id → whether ruta currently handles that site's links. */
-    val linkHandlers: StateFlow<Map<String, Boolean>> = _linkHandlers.asStateFlow()
-
-    fun setLinkHandling(serviceId: String, enabled: Boolean) {
-        linkHandling.setEnabled(serviceId, enabled)
-        _linkHandlers.value = _linkHandlers.value + (serviceId to enabled)
-    }
-
-    /** Re-read state in case the user changed it from the system settings screen. */
-    fun refreshLinkHandling() {
-        _linkHandlers.value = linkHandling.snapshot()
+    init {
+        // Make sure every wrapped site's domain is offered to Android, so the user can manage them
+        // all from the system "open by default" screen (link handling is no longer toggled in-app).
+        linkHandling.ensureAllEnabled()
     }
 
     fun openLinkSystemSettings() = linkHandling.openSystemSettings()
