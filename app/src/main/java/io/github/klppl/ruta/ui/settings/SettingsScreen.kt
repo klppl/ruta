@@ -16,7 +16,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -144,25 +143,21 @@ fun SettingsScreen(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
+            Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                Text(
+                    text = if (status.ready) {
+                        "${status.networkRules} block rules loaded — lists update daily"
+                    } else {
+                        "Filter lists not loaded yet"
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                if (status.error != null) {
                     Text(
-                        text = if (status.ready) "${status.networkRules} block rules loaded" else "Filter lists not loaded yet",
-                        style = MaterialTheme.typography.bodyMedium,
+                        "Last update error: ${status.error}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
                     )
-                    if (status.error != null) {
-                        Text(
-                            "Last error: ${status.error}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                    }
-                }
-                Button(onClick = viewModel::refreshLists, enabled = !status.refreshing) {
-                    Text(if (status.refreshing) "Updating…" else "Update")
                 }
             }
 

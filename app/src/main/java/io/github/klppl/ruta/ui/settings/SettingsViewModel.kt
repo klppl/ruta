@@ -60,8 +60,6 @@ class SettingsViewModel @Inject constructor(
         .map { listOf(Profile.Default) + it }
         .stateIn(viewModelScope, SharingStarted.Eagerly, listOf(Profile.Default))
 
-    private val blocklist = blocklistRepository
-
     init {
         // Make sure every wrapped site's domain is offered to Android, so the user can manage them
         // all from the system "open by default" screen (link handling is no longer toggled in-app).
@@ -103,7 +101,6 @@ class SettingsViewModel @Inject constructor(
         launch { settingsRepository.setAppLock(enabled) }
     }
     fun setGlobalCss(css: String) = launch { styleRepository.setGlobalCss(css) }
-    fun refreshLists() = launch { blocklist.refresh(force = true) }
     fun deleteProfile(id: String) = launch { profileManager.deleteProfile(id) }
 
     /** Wipes cookies + web storage for [id] ("log out of everything" for that profile). */

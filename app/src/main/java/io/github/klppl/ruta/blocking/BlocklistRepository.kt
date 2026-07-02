@@ -93,27 +93,31 @@ class BlocklistRepository @Inject constructor(
         _status.value = _status.value.copy(refreshing = false, error = error)
     }
 
-    suspend fun refresh(force: Boolean): Boolean = refreshMutex.withLock {
-        val enabled = filterListRepository.lists.first().filter { it.enabled }
-        _status.value = _status.value.copy(refreshing = true, error = null)
-        var changed = false
-        var error: String? = null
-        try {
-            for (entry in enabled) {
-                val meta = readMeta(entry.id)
-                if (!force && meta != null && !meta.isStale() && listFile(entry.id).exists()) continue
-                if (downloadOne(entry)) changed = true
+    // withContext(IO): downloadOne blocks on the network, and callers may be on the main
+    // dispatcher (that used to surface as NetworkOnMainThreadException → "refresh failed").
+    suspend fun refresh(force: Boolean): Boolean = withContext(Dispatchers.IO) {
+        refreshMutex.withLock {
+            val enabled = filterListRepository.lists.first().filter { it.enabled }
+            _status.value = _status.value.copy(refreshing = true, error = null)
+            var changed = false
+            var error: String? = null
+            try {
+                for (entry in enabled) {
+                    val meta = readMeta(entry.id)
+                    if (!force && meta != null && !meta.isStale() && listFile(entry.id).exists()) continue
+                    if (downloadOne(entry)) changed = true
+                }
+            } catch (t: Throwable) {
+                error = t.message ?: "refresh failed"
             }
-        } catch (t: Throwable) {
-            error = t.message ?: "refresh failed"
+            parseEnabled(enabled)
+            _status.value = _status.value.copy(
+                refreshing = false,
+                error = error,
+                lastUpdatedMillis = if (changed) System.currentTimeMillis() else _status.value.lastUpdatedMillis,
+            )
+            error == null
         }
-        parseEnabled(enabled)
-        _status.value = _status.value.copy(
-            refreshing = false,
-            error = error,
-            lastUpdatedMillis = if (changed) System.currentTimeMillis() else _status.value.lastUpdatedMillis,
-        )
-        error == null
     }
 
     private suspend fun parseEnabled(enabled: List<FilterListEntry>) {
