@@ -350,7 +350,7 @@ class BrowserViewModel @Inject constructor(
         // Already open on this profile (e.g. a dock tab restored at launch)? Switch to it
         // instead of minting a duplicate — the dashboard is the entry point on every launch.
         val existing = _tabs.value.firstOrNull { tab ->
-            !tab.isNewTab && tab.profileId == profileId && hostMatches(tab.url, service.host)
+            !tab.isNewTab && tab.profileId == profileId && hostMatches(tab.url, service)
         }
         if (existing != null) {
             _activeId.value = existing.id
@@ -580,10 +580,10 @@ class BrowserViewModel @Inject constructor(
 
     private fun newId(): String = "tab:" + UUID.randomUUID().toString().take(8)
 
-    /** True if [url]'s host is [serviceHost] or a subdomain of it. */
-    private fun hostMatches(url: String, serviceHost: String): Boolean {
+    /** True if [url]'s host belongs to [service] (its host, an alias, or a subdomain of either). */
+    private fun hostMatches(url: String, service: AppService): Boolean {
         val host = Hosts.hostOf(url) ?: return false
-        return host == serviceHost || host.endsWith(".$serviceHost")
+        return service.matchesHost(host)
     }
 
     private fun toUrlOrSearch(raw: String): String {
