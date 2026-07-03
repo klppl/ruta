@@ -69,6 +69,7 @@ fun ServiceLauncher(
     stats: BlockStats,
     rulesLoaded: Int,
     editMode: Boolean,
+    showArrangeHint: Boolean,
     onEnterEdit: () -> Unit,
     onExitEdit: () -> Unit,
     onCommitOrder: (List<String>) -> Unit,
@@ -91,18 +92,29 @@ fun ServiceLauncher(
     }
 
     Column(modifier = modifier.fillMaxSize().padding(horizontal = 20.dp)) {
-        Text(
-            text = "ruta",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(top = 28.dp, bottom = 4.dp),
-        )
-        Text(
-            text = "A calmer way into your feeds",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(bottom = 16.dp),
-        )
+        // Full greeting only on a fresh install; once the user has their own sites the
+        // branding shrinks to a wordmark and gives the space back to the content.
+        if (hasSites) {
+            Text(
+                text = "ruta",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(top = 16.dp, bottom = 14.dp),
+            )
+        } else {
+            Text(
+                text = "ruta",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(top = 28.dp, bottom = 4.dp),
+            )
+            Text(
+                text = "A calmer way into your feeds",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 16.dp),
+            )
+        }
         Surface(
             onClick = onSearch,
             shape = CircleShape,
@@ -156,6 +168,13 @@ fun ServiceLauncher(
             )
             if (editMode) {
                 TextButton(onClick = onExitEdit) { Text("Done") }
+            } else if (hasSites && showArrangeHint) {
+                // One-time discoverability nudge; gone for good after the first long-press.
+                Text(
+                    text = "Hold a tile to arrange",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
         val gridState = rememberLazyGridState()
@@ -256,7 +275,7 @@ internal fun ServiceTile(
                     icon = Icons.Rounded.Close,
                     contentDescription = "Remove ${service.name}",
                     onClick = onRemove,
-                    modifier = Modifier.align(Alignment.TopEnd).offset(x = 5.dp, y = (-5).dp),
+                    modifier = Modifier.align(Alignment.TopEnd).offset(x = 15.dp, y = (-15).dp),
                 )
             }
             if (editMode && onEdit != null) {
@@ -264,7 +283,7 @@ internal fun ServiceTile(
                     icon = Icons.Rounded.Edit,
                     contentDescription = "Edit ${service.name}",
                     onClick = onEdit,
-                    modifier = Modifier.align(Alignment.TopStart).offset(x = (-5).dp, y = (-5).dp),
+                    modifier = Modifier.align(Alignment.TopStart).offset(x = (-15).dp, y = (-15).dp),
                 )
             }
         }
@@ -278,6 +297,7 @@ internal fun ServiceTile(
     }
 }
 
+/** A 26dp visual dot inside a 44dp touch target — badge-sized to look at, finger-sized to hit. */
 @Composable
 private fun TileBadge(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
@@ -287,19 +307,26 @@ private fun TileBadge(
 ) {
     Box(
         modifier = modifier
-            .size(24.dp)
+            .size(44.dp)
             .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
-            .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(
-            icon,
-            contentDescription = contentDescription,
-            tint = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.size(14.dp),
-        )
+        Box(
+            modifier = Modifier
+                .size(26.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                icon,
+                contentDescription = contentDescription,
+                tint = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.size(15.dp),
+            )
+        }
     }
 }
 

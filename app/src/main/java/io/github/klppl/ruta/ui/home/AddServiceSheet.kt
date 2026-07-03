@@ -69,26 +69,29 @@ fun AddServiceSheet(
                 }
             }
         }
+        // Tonal button styling — left-aligned gray text in a pill reads as a disabled
+        // input field, so this gets container color + centered content instead.
         Surface(
             onClick = onAddCustom,
             shape = CircleShape,
-            color = MaterialTheme.colorScheme.surfaceVariant,
+            color = MaterialTheme.colorScheme.secondaryContainer,
             modifier = Modifier.fillMaxWidth().padding(top = 20.dp),
         ) {
             Row(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
             ) {
                 Icon(
                     Icons.Rounded.Add,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
                 )
                 Text(
                     text = "Add a custom site",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 12.dp),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    modifier = Modifier.padding(start = 10.dp),
                 )
             }
         }

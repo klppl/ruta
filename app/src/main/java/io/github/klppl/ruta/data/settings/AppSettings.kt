@@ -21,4 +21,6 @@ data class AppSettings(
     val proxyUrl: String = "",
     val appLock: Boolean = false,
     val searchEngine: String = "duckduckgo",
+    /** One-time dashboard hint; flips true the first time the user enters arrange mode. */
+    val arrangeHintSeen: Boolean = false,
 )

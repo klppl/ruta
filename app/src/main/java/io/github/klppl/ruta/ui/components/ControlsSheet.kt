@@ -30,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import io.github.klppl.ruta.util.formatCount
 
 @Composable
 fun ControlsSheet(
@@ -58,31 +59,37 @@ fun ControlsSheet(
             modifier = Modifier.padding(bottom = 12.dp),
         )
 
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            QuickAction(Icons.Rounded.Refresh, "Reload", Modifier.weight(1f), onReload)
-            QuickAction(Icons.Rounded.Download, "Media", Modifier.weight(1f), onDownloadMedia)
-            QuickAction(Icons.Rounded.ContentCopy, "Copy", Modifier.weight(1f), onCopyLink)
-            QuickAction(Icons.Rounded.Add, "New tab", Modifier.weight(1f), onNewTab)
-        }
+        // Page actions only exist when a page is open; on the dashboard the sheet
+        // holds just the global items so nothing in it is a no-op.
+        val onPage = host != null
 
-        ToggleRow(
-            icon = Icons.Rounded.DesktopWindows,
-            title = "Desktop site",
-            checked = desktopMode,
-            onCheckedChange = { onToggleDesktop() },
-        )
+        if (onPage) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                QuickAction(Icons.Rounded.Refresh, "Reload", Modifier.weight(1f), onReload)
+                QuickAction(Icons.Rounded.Download, "Media", Modifier.weight(1f), onDownloadMedia)
+                QuickAction(Icons.Rounded.ContentCopy, "Copy", Modifier.weight(1f), onCopyLink)
+                QuickAction(Icons.Rounded.Add, "New tab", Modifier.weight(1f), onNewTab)
+            }
+            ToggleRow(
+                icon = Icons.Rounded.DesktopWindows,
+                title = "Desktop site",
+                checked = desktopMode,
+                onCheckedChange = { onToggleDesktop() },
+            )
+        }
         ToggleRow(
             icon = Icons.Rounded.Shield,
             title = "Block ads & trackers",
-            subtitle = if (blockedRules > 0) "$blockedRules rules active" else "Loading lists…",
+            subtitle = if (blockedRules > 0) "${formatCount(blockedRules.toLong())} rules active" else "Loading lists…",
             checked = adBlockEnabled,
             onCheckedChange = onToggleAdBlock,
         )
-        if (host != null) LinkRow(Icons.Rounded.FindInPage, "Find in page", onFindInPage)
-        if (host != null) LinkRow(Icons.Rounded.CleaningServices, "Clear site data…", onClearSiteData)
+        if (onPage) LinkRow(Icons.Rounded.FindInPage, "Find in page", onFindInPage)
+        if (onPage) LinkRow(Icons.Rounded.CleaningServices, "Clear site data…", onClearSiteData)
+        if (!onPage) LinkRow(Icons.Rounded.Add, "New tab", onNewTab)
         LinkRow(Icons.Rounded.GridView, "All tabs", onShowTabs)
         LinkRow(Icons.Rounded.Settings, "Settings", onOpenSettings)
     }

@@ -34,6 +34,7 @@ class SettingsRepository @Inject constructor(
         val proxyUrl = stringPreferencesKey("proxy_url")
         val appLock = booleanPreferencesKey("app_lock")
         val searchEngine = stringPreferencesKey("search_engine")
+        val arrangeHintSeen = booleanPreferencesKey("arrange_hint_seen")
     }
 
     val settings: Flow<AppSettings> = dataStore.data.map { p ->
@@ -57,6 +58,7 @@ class SettingsRepository @Inject constructor(
             proxyUrl = p[Keys.proxyUrl] ?: "",
             appLock = p[Keys.appLock] ?: false,
             searchEngine = p[Keys.searchEngine] ?: "duckduckgo",
+            arrangeHintSeen = p[Keys.arrangeHintSeen] ?: false,
         )
     }
 
@@ -78,6 +80,7 @@ class SettingsRepository @Inject constructor(
     suspend fun setProxyUrl(value: String) = edit { it[Keys.proxyUrl] = value }
     suspend fun setAppLock(value: Boolean) = edit { it[Keys.appLock] = value }
     suspend fun setSearchEngine(value: String) = edit { it[Keys.searchEngine] = value }
+    suspend fun setArrangeHintSeen(value: Boolean) = edit { it[Keys.arrangeHintSeen] = value }
 
     private suspend fun edit(block: (androidx.datastore.preferences.core.MutablePreferences) -> Unit) {
         dataStore.edit(block)

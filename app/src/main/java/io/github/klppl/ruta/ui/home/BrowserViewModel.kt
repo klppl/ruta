@@ -491,6 +491,10 @@ class BrowserViewModel @Inject constructor(
         _selectedProfileId.value = id
     }
 
+    fun markArrangeHintSeen() {
+        viewModelScope.launch { settingsRepository.setArrangeHintSeen(true) }
+    }
+
     fun createProfile(name: String) {
         viewModelScope.launch {
             val profile = profileManager.createProfile(name)

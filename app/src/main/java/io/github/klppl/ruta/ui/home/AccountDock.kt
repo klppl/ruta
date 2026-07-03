@@ -128,7 +128,9 @@ private fun DockItem(
             modifier = Modifier
                 .size(46.dp)
                 .scale(if (dragging) 1.12f else 1f)
-                .alpha(if (active || editMode) 1f else 0.55f),
+                // Light dim only — brand glyphs must stay recognizable when inactive
+                // (on the dashboard every item is inactive); the ring carries "active".
+                .alpha(if (active || editMode) 1f else 0.8f),
             shape = CircleShape,
             color = service?.brandColor ?: if (showFavicon) Color.White else MaterialTheme.colorScheme.surface,
             border = BorderStroke(
@@ -168,23 +170,31 @@ private fun DockItem(
         }
 
         if (editMode) {
+            // 20dp visual dot inside a 44dp touch target so the close action is hittable.
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .offset(x = 3.dp, y = (-3).dp)
-                    .size(18.dp)
+                    .offset(x = 16.dp, y = (-16).dp)
+                    .size(44.dp)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surfaceContainerHighest)
-                    .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
                     .clickable(onClick = onClose),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(
-                    Icons.Rounded.Close,
-                    contentDescription = "Close tab",
-                    tint = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.size(12.dp),
-                )
+                Box(
+                    modifier = Modifier
+                        .size(20.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                        .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.Rounded.Close,
+                        contentDescription = "Close tab",
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(13.dp),
+                    )
+                }
             }
         }
     }
