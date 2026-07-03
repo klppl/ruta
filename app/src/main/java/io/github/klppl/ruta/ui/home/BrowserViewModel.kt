@@ -492,7 +492,11 @@ class BrowserViewModel @Inject constructor(
     }
 
     fun createProfile(name: String) {
-        viewModelScope.launch { profileManager.createProfile(name) }
+        viewModelScope.launch {
+            val profile = profileManager.createProfile(name)
+            // Select it right away so the next site opened uses the account just created.
+            _selectedProfileId.value = profile.id
+        }
     }
 
     fun deleteProfile(id: String) {

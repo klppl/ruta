@@ -136,7 +136,6 @@ fun ServiceLauncher(
         if (stats.total > 0) {
             DashboardStats(
                 stats = stats,
-                sites = dashboardServices.size,
                 rulesLoaded = rulesLoaded,
                 modifier = Modifier.padding(bottom = 16.dp),
             )

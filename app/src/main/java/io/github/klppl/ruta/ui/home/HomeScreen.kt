@@ -83,6 +83,7 @@ fun HomeScreen(
     var dockEditMode by remember { mutableStateOf(false) }
     var gridEditMode by remember { mutableStateOf(false) }
     var showClearSiteData by remember { mutableStateOf(false) }
+    var showAddProfile by remember { mutableStateOf(false) }
 
     BackHandler(enabled = true) {
         if (dockEditMode) dockEditMode = false
@@ -94,8 +95,10 @@ fun HomeScreen(
 
     val current = activeTab
     val accent = accentForProfile(current?.profileId ?: "")
-    val topBar = settings.showAddressBar && settings.addressBarAtTop
-    val bottomBar = settings.showAddressBar && !settings.addressBarAtTop
+    // The dashboard has its own search pill, so the address bar only appears on real pages.
+    val onDashboard = current == null || current.isNewTab
+    val topBar = settings.showAddressBar && settings.addressBarAtTop && !onDashboard
+    val bottomBar = settings.showAddressBar && !settings.addressBarAtTop && !onDashboard
 
     Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -131,7 +134,7 @@ fun HomeScreen(
                         profiles = profiles,
                         selectedProfileId = selectedProfile,
                         onSelectProfile = viewModel::setSelectedProfile,
-                        onAddProfile = { viewModel.createProfile("Account ${profiles.size}") },
+                        onAddProfile = { showAddProfile = true },
                         onOpenService = { gridEditMode = false; viewModel.openService(it) },
                         onSearch = { editingUrl = true },
                         dashboardServices = dashboardServices,
@@ -176,48 +179,50 @@ fun HomeScreen(
                     if (!settings.showAddressBar) {
                         LoadingLine(progress = current?.progress ?: 0, accent = accent)
                     }
+                    // Dock and address bar hide together on scroll — one gesture clears all chrome.
                     AnimatedVisibility(
                         visible = dockVisible || !settings.autoHideDock || dockEditMode,
                         enter = expandVertically() + fadeIn(),
                         exit = shrinkVertically() + fadeOut(),
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            if (dockTabs.isNotEmpty()) {
-                                AccountDock(
-                                    tabs = dockTabs,
-                                    activeId = current?.id,
-                                    editMode = dockEditMode,
-                                    onSelect = viewModel::selectTab,
-                                    onReset = viewModel::resetToHome,
-                                    onClose = viewModel::closeTab,
-                                    onNewTab = { viewModel.addNewTab() },
-                                    onMove = viewModel::moveTab,
-                                    onEnterEdit = { dockEditMode = true },
-                                    onExitEdit = { dockEditMode = false },
-                                    modifier = Modifier.weight(1f),
-                                )
-                            } else {
-                                Spacer(Modifier.weight(1f))
-                            }
-                            FilledTonalIconButton(
-                                onClick = { dockEditMode = false; showControls = true },
-                                modifier = Modifier.padding(end = 10.dp),
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                Icon(Icons.Rounded.MoreVert, contentDescription = "Menu")
+                                if (dockTabs.isNotEmpty()) {
+                                    AccountDock(
+                                        tabs = dockTabs,
+                                        activeId = current?.id,
+                                        editMode = dockEditMode,
+                                        onSelect = viewModel::selectTab,
+                                        onReset = viewModel::resetToHome,
+                                        onClose = viewModel::closeTab,
+                                        onMove = viewModel::moveTab,
+                                        onEnterEdit = { dockEditMode = true },
+                                        onExitEdit = { dockEditMode = false },
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                } else {
+                                    Spacer(Modifier.weight(1f))
+                                }
+                                FilledTonalIconButton(
+                                    onClick = { dockEditMode = false; showControls = true },
+                                    modifier = Modifier.padding(end = 10.dp),
+                                ) {
+                                    Icon(Icons.Rounded.MoreVert, contentDescription = "Menu")
+                                }
+                            }
+                            if (bottomBar) {
+                                AddressBarRow(
+                                    title = current?.title.orEmpty(),
+                                    url = current?.url.orEmpty(),
+                                    progress = current?.progress ?: 0,
+                                    accent = accent,
+                                    onClick = { dockEditMode = false; editingUrl = true },
+                                )
                             }
                         }
-                    }
-                    if (bottomBar) {
-                        AddressBarRow(
-                            title = current?.title.orEmpty(),
-                            url = current?.url.orEmpty(),
-                            progress = current?.progress ?: 0,
-                            accent = accent,
-                            onClick = { dockEditMode = false; editingUrl = true },
-                        )
                     }
                 }
             }
@@ -302,6 +307,17 @@ fun HomeScreen(
                 },
             )
         }
+    }
+
+    if (showAddProfile) {
+        AddProfileDialog(
+            suggestedName = "Account ${profiles.size}",
+            onAdd = { name ->
+                viewModel.createProfile(name)
+                showAddProfile = false
+            },
+            onDismiss = { showAddProfile = false },
+        )
     }
 
     if (showAddCustom) {

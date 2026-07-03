@@ -9,7 +9,6 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
@@ -20,7 +19,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Public
 import androidx.compose.material3.Icon
@@ -59,7 +57,6 @@ fun AccountDock(
     onSelect: (String) -> Unit,
     onReset: (String) -> Unit,
     onClose: (String) -> Unit,
-    onNewTab: () -> Unit,
     onMove: (Int, Int) -> Unit,
     onEnterEdit: () -> Unit,
     onExitEdit: () -> Unit,
@@ -70,37 +67,34 @@ fun AccountDock(
         onMove(from.index, to.index)
     }
 
-    Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        LazyRow(
-            state = lazyListState,
-            modifier = Modifier.weight(1f),
-            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            items(tabs, key = { it.id }) { tab ->
-                ReorderableItem(reorderState, key = tab.id) { dragging ->
-                    val dragHandle = if (editMode) Modifier.draggableHandle() else Modifier
-                    DockItem(
-                        tab = tab,
-                        active = tab.id == activeId,
-                        editMode = editMode,
-                        dragging = dragging,
-                        dragHandle = dragHandle,
-                        onClick = {
-                            when {
-                                editMode -> { onExitEdit(); onSelect(tab.id) }
-                                tab.id == activeId -> onReset(tab.id)
-                                else -> onSelect(tab.id)
-                            }
-                        },
-                        onLongClick = { if (!editMode) onEnterEdit() },
-                        onClose = { onClose(tab.id) },
-                    )
-                }
+    LazyRow(
+        state = lazyListState,
+        modifier = modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        items(tabs, key = { it.id }) { tab ->
+            ReorderableItem(reorderState, key = tab.id) { dragging ->
+                val dragHandle = if (editMode) Modifier.draggableHandle() else Modifier
+                DockItem(
+                    tab = tab,
+                    active = tab.id == activeId,
+                    editMode = editMode,
+                    dragging = dragging,
+                    dragHandle = dragHandle,
+                    onClick = {
+                        when {
+                            editMode -> { onExitEdit(); onSelect(tab.id) }
+                            tab.id == activeId -> onReset(tab.id)
+                            else -> onSelect(tab.id)
+                        }
+                    },
+                    onLongClick = { if (!editMode) onEnterEdit() },
+                    onClose = { onClose(tab.id) },
+                )
             }
         }
-        AddButton(onClick = { onExitEdit(); onNewTab() })
     }
 }
 
@@ -192,25 +186,6 @@ private fun DockItem(
                     modifier = Modifier.size(12.dp),
                 )
             }
-        }
-    }
-}
-
-@Composable
-private fun AddButton(onClick: () -> Unit) {
-    Surface(
-        modifier = Modifier.size(46.dp),
-        shape = CircleShape,
-        color = MaterialTheme.colorScheme.surface,
-        onClick = onClick,
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Icon(
-                Icons.Rounded.Add,
-                contentDescription = "New tab",
-                tint = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.size(22.dp),
-            )
         }
     }
 }
