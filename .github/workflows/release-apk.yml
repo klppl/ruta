@@ -88,15 +88,25 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      # Publish the APK as a GitHub Release (the .aab is for Play upload only).
+      # Publish the APK as a GitHub Release (the .aab is for Play upload only). IzzyOnDroid
+      # indexes the APK from the latest release, so the APK asset must always be attached.
+      # Release notes come from the fastlane changelog for this versionCode when one exists
+      # (fastlane/metadata/android/en-US/changelogs/<versionCode>.txt) — keep those files
+      # up to date; IzzyOnDroid/F-Droid clients show the same text as the app's changelog.
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="build-${{ github.run_number }}"
+          CHANGELOG="fastlane/metadata/android/en-US/changelogs/${RUTA_VERSION_CODE}.txt"
+          if [ -f "$CHANGELOG" ]; then
+            NOTES_ARGS=(--notes-file "$CHANGELOG")
+          else
+            NOTES_ARGS=(--notes "Automated release build from commit ${{ github.sha }}. versionCode ${RUTA_VERSION_CODE}. The .aab is for Play upload; the .apk is for sideloading.")
+          fi
           gh release create "$TAG" \
             app/build/outputs/apk/release/*.apk \
             app/build/outputs/bundle/release/*.aab \
             --title "ruta build ${{ github.run_number }} (versionCode ${RUTA_VERSION_CODE})" \
-            --notes "Automated release build from commit ${{ github.sha }}. versionCode ${RUTA_VERSION_CODE}. The .aab is for Play upload; the .apk is for sideloading." \
+            "${NOTES_ARGS[@]}" \
             --target "${{ github.sha }}"

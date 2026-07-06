@@ -1,0 +1,4 @@
+• Sharper site icons — high-resolution favicons that fill the dashboard tiles and dock
+• Simpler link handling: manage which links open in ruta from Android's "Open by default" settings
+• Ad-block filter lists now update themselves daily — the broken manual "Update" button is gone
+• Fixed the Reddit sign-in sheet showing up empty

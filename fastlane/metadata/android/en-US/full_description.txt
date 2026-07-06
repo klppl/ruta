@@ -1,0 +1,17 @@
+ruta puts the social sites you already use — X, Instagram, Facebook, TikTok, Reddit, Bluesky, Threads, LinkedIn, Tumblr and Mastodon — into one clean, private Android app, with ads and trackers blocked. No separate apps, no clutter, no tracking.
+
+<b>Features</b>
+
+• All your feeds, one app — a simple grid of social sites; tap to open. Add any other site too, and arrange the grid however you like.
+• Ads and trackers blocked out of the box (EasyList + EasyPrivacy), with lists that update themselves daily. Add your own filter lists anytime.
+• Multiple accounts, kept separate — each account gets its own isolated profile; switch between them from the bottom dock.
+• Everyday browser comforts — pull-to-refresh, find in page, download videos and images, desktop-site toggle.
+• Force dark mode on any website — on by default.
+• Cleaner links — strips utm_, fbclid and other tracking junk when you copy.
+• Lock it down — optional fingerprint / screen-lock gate over the whole app, third-party cookies off by default, per-site data clearing.
+• Back up and restore your sites and settings as a simple JSON file.
+• Make it yours — custom CSS, a built-in proxy, your choice of search engine, hide the address bar.
+• Genuinely private — no analytics, no accounts, no ads, no third-party tracking SDKs. ruta never reports on you.
+• Modern and beautiful — Material You design with dynamic color, dark/light, edge-to-edge.
+
+ruta blocks ads and trackers on the sites you open and keeps your accounts isolated, but it does not make those sites anonymous — they still apply their own privacy policies.
