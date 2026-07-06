@@ -97,7 +97,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TAG="build-${{ github.run_number }}"
+          # Tag = v<versionCode> so tags correlate with app versions (IzzyOnDroid/F-Droid
+          # repo-check convention: tag names should match versionName or versionCode).
+          TAG="v${RUTA_VERSION_CODE}"
           CHANGELOG="fastlane/metadata/android/en-US/changelogs/${RUTA_VERSION_CODE}.txt"
           if [ -f "$CHANGELOG" ]; then
             NOTES_ARGS=(--notes-file "$CHANGELOG")
