@@ -2,7 +2,7 @@
 ! Description: Built-in filter list maintained in the ruta repo. Add network, cosmetic and
 !   procedural (:has-text) rules here for granular control without depending on a remote list.
 ! Expires: 7 days
-! Version: 3
+! Version: 4
 !
 ! Syntax: standard Adblock Plus. ruta enforces:
 !   - Network:    ||host^   and   @@||host^   (host-anchored only)   plus hostfile lines
@@ -118,9 +118,14 @@ reddit.com##button[id$="-read-more-button"]
 reddit.com##div[class^="sidebar-grid"][class$="fixed"]:style(position: static !important;)
 reddit.com##div[id$="-overflow-cover"]
 reddit.com##div[id$="-post-rtjson-content"]:style(max-height: fit-content !important;)
+! The "View in Reddit app / Open" bottom sheet and the header "Open app" pill (2026 shreddit
+! markup: faceplate-bottom-sheet#xpromo-bottom-sheet, div#xpromo-small-header). The generic
+! [source="xpromo"] tracker rule also covers renamed nouns (top_button → top_nav_get_app).
+reddit.com##faceplate-bottom-sheet#xpromo-bottom-sheet
+reddit.com###xpromo-small-header
+reddit.com##faceplate-tracker[source="xpromo"]
 reddit.com##faceplate-tracker[noun="campaign_slot"][source="nav"]
 reddit.com##faceplate-tracker[noun="campaign_slot"][source="nav"] + hr
-reddit.com##faceplate-tracker[noun="top_button"][source="xpromo"]
 reddit.com##img[class="_1VSyzeCqhLG-H2N68kAx9V _3UqAK6QeNaMYy-9jvRefdv"]:style(filter: none !important;)
 reddit.com##rpl-dialog-trigger[dialog-id$="-privacy-dialog"]
 reddit.com##shreddit-ad-post
