@@ -27,6 +27,7 @@ import io.github.klppl.ruta.util.Hosts
 import io.github.klppl.ruta.util.UrlSanitizer
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -35,6 +36,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -165,8 +167,15 @@ class BrowserViewModel @Inject constructor(
         list.firstOrNull { it.id == id }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
+    // Completed once restoreSession has populated tabs; work that must not race the restore
+    // (an external link arriving during cold start) awaits it.
+    private val sessionRestored = CompletableDeferred<Unit>()
+
     init {
-        viewModelScope.launch { restoreSession() }
+        viewModelScope.launch {
+            restoreSession()
+            sessionRestored.complete(Unit)
+        }
         // Persist lightweight tab state after changes settle.
         viewModelScope.launch {
             combine(_tabs, _activeId) { t, a -> t to a }
@@ -302,38 +311,45 @@ class BrowserViewModel @Inject constructor(
     fun openExternalLink(raw: String) {
         val url = toUrlOrSearch(raw)
         if (url.isBlank()) return
-        val service = Services.forHost(Hosts.hostOf(url))
-        val profileId = if (settings.value.separateProfilePerSite && service != null) {
-            Profile.siteId(service.host)
-        } else {
-            _selectedProfileId.value
-        }
-        _dockVisible.value = true
-        _showTabSwitcher.value = false
+        viewModelScope.launch {
+            // A link tapped while ruta cold-starts arrives before restoreSession finishes;
+            // opening it right away would be undone when the restore overwrites the tab list
+            // and lands on the dashboard. Waiting also lets the link reuse a restored tab.
+            sessionRestored.await()
+            val service = Services.forHost(Hosts.hostOf(url))
+            val separateProfiles = settingsRepository.settings.first().separateProfilePerSite
+            val profileId = if (separateProfiles && service != null) {
+                Profile.siteId(service.host)
+            } else {
+                _selectedProfileId.value
+            }
+            _dockVisible.value = true
+            _showTabSwitcher.value = false
 
-        val reusable = _tabs.value.firstOrNull {
-            it.profileId == profileId &&
-                service != null && Services.forHost(Hosts.hostOf(it.url))?.host == service.host
-        }
-        val active = activeTab.value
-        when {
-            reusable != null -> {
-                _activeId.value = reusable.id
-                _tabs.value = _tabs.value.map {
-                    if (it.id == reusable.id) it.copy(url = url, isNewTab = false) else it
-                }
-                engine.loadUrl(reusable.id, url)
+            val reusable = _tabs.value.firstOrNull {
+                it.profileId == profileId &&
+                    service != null && Services.forHost(Hosts.hostOf(it.url))?.host == service.host
             }
-            active != null && active.isNewTab -> {
-                _tabs.value = _tabs.value.map {
-                    if (it.id == active.id) it.copy(url = url, profileId = profileId, isNewTab = false) else it
+            val active = activeTab.value
+            when {
+                reusable != null -> {
+                    _activeId.value = reusable.id
+                    _tabs.value = _tabs.value.map {
+                        if (it.id == reusable.id) it.copy(url = url, isNewTab = false) else it
+                    }
+                    engine.loadUrl(reusable.id, url)
                 }
-                engine.loadUrl(active.id, url)
-            }
-            else -> {
-                val tab = Tab(id = newId(), url = url, profileId = profileId, isNewTab = false)
-                _tabs.value = _tabs.value + tab
-                _activeId.value = tab.id
+                active != null && active.isNewTab -> {
+                    _tabs.value = _tabs.value.map {
+                        if (it.id == active.id) it.copy(url = url, profileId = profileId, isNewTab = false) else it
+                    }
+                    engine.loadUrl(active.id, url)
+                }
+                else -> {
+                    val tab = Tab(id = newId(), url = url, profileId = profileId, isNewTab = false)
+                    _tabs.value = _tabs.value + tab
+                    _activeId.value = tab.id
+                }
             }
         }
     }
