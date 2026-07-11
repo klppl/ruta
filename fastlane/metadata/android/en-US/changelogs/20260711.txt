@@ -1,0 +1,7 @@
+ruta's first public release.
+
+• Your social sites in one place — Reddit, X, Instagram, Threads, Bluesky, Mastodon and more, launched from a calm dashboard
+• Built-in ad and tracker blocking, with "open in the app" nags hidden
+• Separate profiles keep accounts isolated from each other
+• Links from other apps can open straight in ruta
+• No analytics, no telemetry — everything stays on your device
