@@ -47,7 +47,7 @@ Three user-facing concepts, each with its own persistence:
 
 Browser layer (`browser/`): `BrowserEngine` + `WebViewPool` own WebView instances keyed by tab id; `RutaWebViewClient` intercepts requests through the blocking layer; `ContentScriptInjector` injects `app/src/main/assets/content.js` at document-start.
 
-Blocking layer (`blocking/`): `AbpParser` parses ABP-syntax filter lists (EasyList/EasyPrivacy downloaded at runtime, plus bundled `assets/filters/ruta.txt`); `RequestBlocker` does network blocking, `CosmeticRules` element hiding, `BlockStatsRepository` counts, `BlocklistRefreshWorker` refreshes lists daily via WorkManager.
+Blocking layer (`blocking/`): `AbpParser` parses ABP-syntax filter lists (EasyList/EasyPrivacy downloaded at runtime, plus `assets/filters/ruta.txt`); `RequestBlocker` does network blocking, `CosmeticRules` element hiding, `BlockStatsRepository` counts, `BlocklistRefreshWorker` refreshes lists daily via WorkManager. `ruta.txt` is both bundled (offline seed) **and fetched from GitHub raw main**, so pushing a rule change to main reaches all installs within a day — no app release needed, but it also means a bad rule pushed to main ships immediately. **Bump its `! Version:` header on every edit**: the higher version wins between bundled/cached/fetched copies (that's what protects local dev edits from being overwritten by the remote fetch).
 
 `links/LinkHandling` handles external link interception (the app is a browser-role candidate); `util/UrlSanitizer` strips tracking params on copy.
 

@@ -1,8 +1,12 @@
 ! Title: ruta filters
 ! Description: Built-in filter list maintained in the ruta repo. Add network, cosmetic and
-!   procedural (:has-text) rules here for granular control without depending on a remote list.
-! Expires: 7 days
-! Version: 4
+!   procedural (:has-text) rules here for granular control. The app ships this file as an
+!   offline seed AND fetches it from GitHub raw (main branch), so pushing to main updates
+!   all installs within a day — no app release needed.
+! IMPORTANT: bump Version on every edit. The app keeps whichever copy (bundled, cached or
+!   fetched) has the higher Version, so an un-bumped edit can be overwritten by the remote.
+! Expires: 1 day
+! Version: 5
 !
 ! Syntax: standard Adblock Plus. ruta enforces:
 !   - Network:    ||host^   and   @@||host^   (host-anchored only)   plus hostfile lines

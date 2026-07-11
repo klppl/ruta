@@ -16,7 +16,9 @@ import javax.inject.Singleton
 
 /**
  * A single ABP/hostfile filter list the user can enable/disable. When [asset] is set the list
- * ships inside the app (read from `assets/`) instead of being downloaded from [url].
+ * ships inside the app (read from `assets/`) as an offline seed; if [url] is also set, the
+ * remote copy is fetched on refresh so rule updates reach users without an app release
+ * (whichever copy has the higher `! Version:` wins — see BlocklistRepository).
  */
 @Serializable
 data class FilterListEntry(
@@ -45,9 +47,13 @@ class FilterListRepository @Inject constructor(
         if (stored.isEmpty()) {
             DEFAULTS
         } else {
-            // Ensure built-in defaults are always present even after an app update adds new ones.
-            val ids = stored.mapTo(HashSet()) { it.id }
-            stored + DEFAULTS.filter { it.id !in ids }
+            // Built-in entries take their identity (name/url/asset) from the current DEFAULTS so
+            // an app update can repoint them; only the user's enabled flag is kept from disk.
+            // Also ensures new built-ins added by an update show up.
+            val defaults = DEFAULTS.associateBy { it.id }
+            val merged = stored.map { entry -> defaults[entry.id]?.copy(enabled = entry.enabled) ?: entry }
+            val ids = merged.mapTo(HashSet()) { it.id }
+            merged + DEFAULTS.filter { it.id !in ids }
         }
     }
 
@@ -88,7 +94,7 @@ class FilterListRepository @Inject constructor(
             FilterListEntry(
                 id = "ruta",
                 name = "ruta filters",
-                url = "",
+                url = "https://raw.githubusercontent.com/klppl/ruta/main/app/src/main/assets/filters/ruta.txt",
                 enabled = true,
                 builtIn = true,
                 asset = "filters/ruta.txt",
