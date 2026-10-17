@@ -1,5 +1,7 @@
 # ruta
 
+[![License: Lagom](https://img.shields.io/badge/license-lagom-9E2B25)](https://klppl.github.io/lagom-license/)
+
 **One calm, private home for all your social feeds.**
 
 ruta puts the social sites you already use — X, Instagram, Facebook, TikTok, Reddit, Bluesky,
